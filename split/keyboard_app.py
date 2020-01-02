@@ -32,7 +32,35 @@ keyconn.bind((host_ip, 2048))
 keyconn.listen(5)
 
 serverconn, _ = keyconn.accept()
-
+pygame.init()
 while True:
     msg = input("Input keyboard: ")
+    event = pygame.event.wait()
+
+    # if the 'close' button of the window is pressed
+    if event.type == pygame.QUIT:
+        # stops the application
+        break
+
+    # captures the 'KEYDOWN' and 'KEYUP' events
+    if event.type in (pygame.KEYDOWN, pygame.KEYUP):
+        # gets the key name
+        key_name = pygame.key.name(event.key)
+
+        # converts to uppercase the key name
+        key_name = key_name.upper()
+        msg = key_name
+
+        # if any key is pressed
+        if event.type == pygame.KEYDOWN:
+            print(key_name)
+
+        # if any key is released
+        elif event.type == pygame.KEYUP:
+            # prints on the console the released key
+            print(key_name)
+
+
     serverconn.send(msg.encode('ascii'))
+
+pygame.quit()
