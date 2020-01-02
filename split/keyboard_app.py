@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import time
 import socket
-import keyboard
+import pygame
 import threading
 import tkinter as tk
 from msvcrt import getch
@@ -33,8 +33,14 @@ keyconn.listen(5)
 
 serverconn, _ = keyconn.accept()
 pygame.init()
+
+# sets the window title
+pygame.display.set_caption(u'Keyboard events')
+
+# sets the window size
+pygame.display.set_mode((400, 400))
+
 while True:
-    msg = input("Input keyboard: ")
     event = pygame.event.wait()
 
     # if the 'close' button of the window is pressed
@@ -59,7 +65,8 @@ while True:
         elif event.type == pygame.KEYUP:
             # prints on the console the released key
             print(key_name)
-
+    else:
+        msg = 'default'
 
     serverconn.send(msg.encode('ascii'))
 
