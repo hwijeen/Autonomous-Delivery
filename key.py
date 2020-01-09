@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# imports the Pygame library
+# imports the Pygame libraries
 import pygame
 
 
