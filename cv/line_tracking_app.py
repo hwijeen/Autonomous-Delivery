@@ -22,13 +22,14 @@ def recvall(sock, count):
 def thread1():
     while True:
         length = recvall(robotconn, 16)  # 길이 16의 데이터를 먼저 수신하는 것은 여기에 이미지의 길이를 먼저 받아서 이미지를 받을 때 편리하려고 하는 것이다.
-        print("Length is %d" % int(length))
+        # print("Length is %d" % int(length))
         stringData = recvall(robotconn, int(length))
         data = np.fromstring(stringData, dtype='uint8')
         rgb_img = cv2.imdecode(data, 1)
-        cropped = rgb_img[360:480, :]
 
-        blur = cv2.GaussianBlur(cropped, (5, 5), 0)
+        # cropped = rgb_img[360:480, :]
+        '''
+        blur = cv2.GaussianBlur(rgb_img, (5, 5), 0)
         hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
         low_yellow = np.array([18, 94, 140])
         up_yellow = np.array([48, 255, 255])
@@ -36,21 +37,34 @@ def thread1():
         edges = cv2.Canny(mask, 80, 150)
 
         # im2, cnts, hierarachy = cv2.findContours(edges, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-
+        
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 40, maxLineGap=50)
+        angle_sum, shift_sum = 0.0, 0.0
+        count = 0
         if lines is not None:
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 cv2.line(rgb_img, (x1, y1 + 360), (x2, y2 + 360), (0, 255, 0), 5)
-                angle = np.arctan((y2 - y1) / (x2 - x1))
-                shift = ((x1 + x2) / 2) - 320.0
-                print(angle, shift)
-                time.sleep(1)
+                angle = np.arctan((max(y1, y2) - min(y1, y2)) / np.abs(x2 - x1)) * 180.0 / np.pi
+                angle_sum += angle
+                shift_sum += ((x1 + x2) / 2) - 320.0
+                count += 1
+
+            angle = angle_sum / count
+            shift = shift_sum / count
+            print(angle, shift)
+
+        # time.sleep(1)
         # plt.imshow(np.real(rgb_img))
         # plt.pause(0.01)
         # ax.clear()
+        '''
+
+        cv2.line(rgb_img, (0, 240), (640, 240), (0, 0, 255), 2)
+        cv2.line(rgb_img, (0, 360), (640, 360), (0, 0, 255), 2)
 
         cv2.imshow('Streaming', rgb_img)
+        # cv2.imshow('Streaming', edges)
         # cv2.waitKey(0)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
