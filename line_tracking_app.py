@@ -25,13 +25,13 @@ def thread1():
         data = np.fromstring(stringData, dtype='uint8')
         rgb_img = cv2.imdecode(data, 1)
 
-        '''
+
         # gray = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2GRAY)
 
         blur = cv2.GaussianBlur(rgb_img, (5, 5), 0)
         hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-        low_yellow = np.array([20, 50, 50])
-        up_yellow = np.array([50, 255, 255])
+        low_yellow = np.array([20, 65, 65])
+        up_yellow = np.array([35, 255, 255])
         mask = cv2.inRange(hsv, low_yellow, up_yellow)
         cv2.imshow('Streaming', mask)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -41,7 +41,7 @@ def thread1():
         cv2.imshow('Streaming', rgb_img)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
+        '''
 
 def thread2():
     def on_press(key):

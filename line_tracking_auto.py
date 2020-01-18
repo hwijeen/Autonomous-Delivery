@@ -18,8 +18,10 @@ if __name__ == "__main__":
 
         blur = cv2.GaussianBlur(cropped, (5, 5), 0)
         hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-        low_yellow = np.array([20, 50, 50])
-        up_yellow = np.array([50, 255, 255])
+        # low_yellow = np.array([20, 50, 50])
+        # up_yellow = np.array([40, 255, 255])
+        low_yellow = np.array([20, 65, 65])
+        up_yellow = np.array([35, 255, 255])
         mask = cv2.inRange(hsv, low_yellow, up_yellow)
         edges = cv2.Canny(mask, 50, 150)
 

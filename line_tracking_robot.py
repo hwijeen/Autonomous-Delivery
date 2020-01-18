@@ -17,8 +17,8 @@ def thread1():
 
         blur = cv2.GaussianBlur(cropped, (5, 5), 0)
         hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-        low_yellow = np.array([20, 50, 50])
-        up_yellow = np.array([50, 255, 255])
+        low_yellow = np.array([20, 65, 65])
+        up_yellow = np.array([35, 255, 255])
         mask = cv2.inRange(hsv, low_yellow, up_yellow)
         edges = cv2.Canny(mask, 50, 150)
 
@@ -100,8 +100,8 @@ def thread1():
             left = max(0.5 + 0.0015 * min(0.0, shift) + 0.4 * min(0.0, angle) / 45.0, 0.1)
             right = min(-0.5 + 0.0015 * max(0.0, shift) + 0.38 * max(0.0, angle) / 45.0, -0.1)
 
-            kit.continuous_servo[0].throttle = right
-            kit.continuous_servo[1].throttle = left
+            # kit.continuous_servo[0].throttle = right
+            # kit.continuous_servo[1].throttle = left
             print("Angle: %.2f, Shift: %d, Left: %.4f, Right: %.4f" % (angle, shift, left, -right))
 
             prev_angle = angle
