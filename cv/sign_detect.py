@@ -2,8 +2,8 @@ import numpy as np
 import cv2
 import imutils
 from matplotlib import pyplot as plt
-
-org_image = cv2.imread("C:/Users/shins/Desktop/temp/stop_sign_162.png")
+import pdb
+org_image = cv2.imread("/Users/kang/Desktop/data/stop_sign_1080.png")
 # cv2.imshow("org", org_image)
 # cv2.waitKey(0)
 
@@ -18,14 +18,14 @@ for y in range(org_image.shape[0]):
             image[y,x,c] = np.clip(alpha*org_image[y,x,c] + beta, 0, 255)
 
 
-cv2.imshow('Original Image', org_image)
-cv2.waitKey(0)
-cv2.imshow('image Image', image)
-# cv2.imshow("new", new_image)
-cv2.waitKey(0)
+# cv2.imshow('Original Image', org_image)
+# cv2.waitKey(0)
+# cv2.imshow('image Image', image)
+# # cv2.imshow("new", new_image)
+# cv2.waitKey(0)
 
-plt.imshow(image)
-plt.show()
+# plt.imshow(image)
+# plt.show()
 
 # org_image = cv2.resize(org_image, (500, 700))
 image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -59,9 +59,6 @@ def detect(c):
         # compute the bounding box of the contour and use the
         # bounding box to compute the aspect ratio
         (x, y, w, h) = cv2.boundingRect(approx)
-        # import pdb
-        # pdb.set_trace()
-        print(w, h)
 
         ar = w / float(h)
 
@@ -80,7 +77,8 @@ boundaries = [  #BGR
     # ([0, 50, 50], [10, 255, 255]),  #RED
     # ([161, 155, 84], [179, 255, 255]),
     # ([36, 25, 25], [70, 255,255])  #GREEN
-    ([30, 150, 100], [70, 250, 200])  #GREEN
+    # ([30, 150, 100], [70, 250, 200])  #GREEN
+    ([30, 0, 0], [70, 250, 200])
 ]
 
 # loop over the boundaries
@@ -105,8 +103,8 @@ for idx, (lower, upper) in enumerate(boundaries):
     blurred = cv2.GaussianBlur(v1, (21, 21), 0)
     thresh = cv2.threshold(blurred, 50, 255, cv2.THRESH_BINARY)[1]
 
-    cv2.imshow("v1", thresh)
-    cv2.waitKey(0)
+    # cv2.imshow("v1", thresh)
+    # cv2.waitKey(0)
 
     # find contours in the thresholded image and initialize the
     # shape detector
@@ -114,42 +112,43 @@ for idx, (lower, upper) in enumerate(boundaries):
     cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
 
-    cv2.imshow("images", np.hstack([org_image, output]))
-    cv2.waitKey(0)
+    # cv2.imshow("images", np.hstack([org_image, output]))
+    # cv2.waitKey(0)
 
-    if idx == 0:
-        if cnts != None:
-            cv2.imshow("stop", cnts[0])
-            cv2.waitKey(0)
-            print("stop")
-            M = cv2.moments(cnts[0])
-            cX = int((M["m10"] / M["m00"]) * ratio)
-            cY = int((M["m01"] / M["m00"]) * ratio)
-            cv2.drawContours(org_image, [cnts[0]], -1, (0, 255, 0), 2)
-            cv2.putText(org_image, "stop", (cX - 20, cY - 70), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, (200, 100, 255), 2)
+    # if idx == 0:
+    #     if cnts != None:
+    #         cv2.imshow("stop", cnts[0])
+    #         cv2.waitKey(0)
+    #         print("stop")
+    #         M = cv2.moments(cnts[0])
+    #         cX = int((M["m10"] / M["m00"]) * ratio)
+    #         cY = int((M["m01"] / M["m00"]) * ratio)
+    #         cv2.drawContours(org_image, [cnts[0]], -1, (0, 255, 0), 2)
+    #         cv2.putText(org_image, "stop", (cX - 20, cY - 70), cv2.FONT_HERSHEY_SIMPLEX,
+    #                     0.5, (200, 100, 255), 2)
 
-        continue
+    #     continue
 
     for c in cnts:
         # compute the center of the contour, then detect the name of the
         # shape using only the contour
 
-
         M = cv2.moments(c)
         cX = int((M["m10"] / M["m00"]) * ratio)
         cY = int((M["m01"] / M["m00"]) * ratio)
-        shape = detect(c)
+        # shape = detect(c)
 
         # multiply the contour (x, y)-coordinates by the resize ratio,
         # then draw the contours and the name of the shape on the image
         c = c.astype("float")
         c *= ratio
         c = c.astype("int")
+        cv2.circle(output, (cX, cY), 5, (255, 255, 255), -1)
         cv2.drawContours(org_image, [c], -1, (0, 255, 0), 2)
-        cv2.putText(org_image, shape, (cX-20, cY-70), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5, (150, 100, 255), 2)
+        # cv2.putText(org_image, shape, (cX-20, cY-70), cv2.FONT_HERSHEY_SIMPLEX,
+        #             0.5, (150, 100, 255), 2)
 
 
 cv2.imshow("images", np.hstack([org_image, output]))
 cv2.waitKey(0)
+
