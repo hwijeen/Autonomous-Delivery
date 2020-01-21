@@ -1,5 +1,4 @@
-import cv2
-import numpy as np
+import pickle
 import socket
 
 
@@ -23,11 +22,13 @@ if __name__ == "__main__":
     print("Server IP:: ", host_ip)
 
     destconn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    destconn.bind((host_ip, 2048))
+    destconn.bind((host_ip, 1200))
     destconn.listen(5)
 
     serverconn, _ = destconn.accept()
 
     while True:
         msg = input("Next address: ")
-        serverconn.send(msg.encode('ascii'))
+        serverconn.send(pickle.dumps(int(msg)))
+        next_address = pickle.loads(serverconn.recv(16))
+        print("Arrived at %d" % next_address)

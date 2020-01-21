@@ -43,7 +43,16 @@ if __name__ == "__main__":
         # print("Length is %d" % int(length))
         stringData = recvall(robotconn, int(length))
         data = np.fromstring(stringData, dtype='uint8')
-        rgb_img = cv2.imdecode(data, 1)
-        cv2.imshow('Streaming', rgb_img)
+
+        hsv_img = cv2.imdecode(data, 1)
+
+        blur = cv2.GaussianBlur(hsv_img, (5, 5), 0)
+        lower_green = np.array([50, 70, 50])
+        upper_green = np.array([70, 255, 255])
+        mask = cv2.inRange(hsv_img, lower_green, upper_green)
+        output = cv2.bitwise_and(blur, blur, mask=mask)
+
+        # rgb_img = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2BGR)
+        cv2.imshow('Streaming', output)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

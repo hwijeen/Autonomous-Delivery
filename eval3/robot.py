@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import socket
 import time
+import pickle
 import imutils
 import threading
 from adafruit_servokit import ServoKit
@@ -58,7 +59,7 @@ def line_tracking(image):
         left = max(0.5 + 0.003 * min(0.0, shift) + 0.4 * min(0.0, angle) / 45.0, 0.1)
         right = min(-0.5 + 0.003 * max(0.0, shift) + 0.38 * max(0.0, angle) / 45.0, -0.1)
 
-        print("Angle: %.2f, Shift: %d, Left: %.4f, Right: %.4f" % (angle, shift, left, -right))
+        # print("Angle: %.2f, Shift: %d, Left: %.4f, Right: %.4f" % (angle, shift, left, -right))
 
     else:
         left, right = None, None
@@ -88,16 +89,13 @@ def sign_detecting(image):
     if len(cnts) != 0:
         cands = []
         for i in range(len(cnts)):
-            # if len(cnts[i]) > 30:
             cands.append(len(cnts[i]))  # 이미지의 크기
-        # print(cands)
         cand = np.asarray(cands)
         max = np.argmax(cand)
 
-        # import pdb
-        # pdb.set_trace()
         if len(cnts[max]) < 70:
-            cX, cY = None, None
+            # not used
+            cX, cY = -1, -1
         else:
             M = cv2.moments(cnts[max])
             cX = int((M["m10"] / M["m00"]))
@@ -106,13 +104,49 @@ def sign_detecting(image):
             cv2.putText(image, "stop", (cX - 20, cY - 50), cv2.FONT_HERSHEY_SIMPLEX,
                         0.5, (255, 255, 255), 2)
     else:
-        cX, cY = None, None
+        # not used
+        cX, cY = -1, -1
 
     return cX, cY
 
 
+def address_detecting(image):
+    lower_green = np.array([40, 50, 50])
+    upper_green = np.array([90, 255, 255])
+
+    mask = cv2.inRange(image, lower_green, upper_green)
+    output = cv2.bitwise_and(image, image, mask=mask)
+
+    h, s, v1 = cv2.split(output)
+
+    cnts = cv2.findContours(v1.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+
+    if len(cnts) != 0:
+        cands = []
+        for i in range(len(cnts)):
+            cands.append(len(cnts[i]))  # 이미지의 크기
+        cand = np.asarray(cands)
+        max = np.argmax(cand)
+
+        if len(cnts[max]) < 30:
+            cX, cY = -1, -1
+        else:
+            M = cv2.moments(cnts[max])
+            cX = int((M["m10"] / M["m00"]))
+            cY = int((M["m01"] / M["m00"]))
+            cv2.drawContours(image, [cnts[max]], -1, (0, 255, 0), 2)
+            cv2.putText(image, "stop", (cX - 20, cY - 50), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (255, 255, 255), 2)
+    else:
+        cX, cY = -1, -1
+
+    return cX, cY, image
+
+
 def vision():
-    global current_address, stop_flag
+    global prev_address, next_address, stop_flag
+    global prev_left, prev_right
     # Here we loop forever to send messages out to the server via the middleware.
     while cap.isOpened():
         # Capture frame-by-frame
@@ -124,19 +158,114 @@ def vision():
         hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
 
         left, right = line_tracking(hsv)
+        stop_x, stop_y = sign_detecting(hsv)
+        addr_x, addr_y, image = address_detecting(hsv)
 
-        cX, cY = sign_detecting(hsv)
-
-        if cY is not None and cY > 200:
-            stop_flag = True
+        if stop_flag is True:
             kit.continuous_servo[0].throttle = 0
             kit.continuous_servo[1].throttle = 0
+        # when stop_flag is False
+        else:
+            if stop_y > 200:
+                stop_flag = True
+                # stop instantly
+                kit.continuous_servo[0].throttle = 0
+                kit.continuous_servo[1].throttle = 0
+                # set prev address
+                prev_address = 0
+                # send message to operatorUI
+                msg = pickle.dumps(int(prev_address))
+                destconn.send(msg)
 
-        if left is not None and stop_flag is False:
-            kit.continuous_servo[0].throttle = right
-            kit.continuous_servo[1].throttle = left
-            # kit.continuous_servo[0].throttle = 0
-            # kit.continuous_servo[1].throttle = 0
+            if addr_x > 0.0:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                stop_flag = True
+                kit.continuous_servo[0].throttle = 0
+                kit.continuous_servo[1].throttle = 0
+                msg = pickle.dumps(int(prev_address))
+                destconn.send(msg)
+            '''
+            # detect 101
+            # (288, 123) , (279, 124) (281, 122)/ (190, 122), (218, 130), (280, 114)
+            if prev_address == 0 and addr_x > 280 and addr_y > 80:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                prev_address = 101
+                if next_address == prev_address:
+                    stop_flag = True
+                    kit.continuous_servo[0].throttle = 0
+                    kit.continuous_servo[1].throttle = 0
+                    msg = pickle.dumps(int(prev_address))
+                    destconn.send(msg)
+            # detect 102
+            # (6, 126), (16, 126), (10, 126)
+            elif prev_address == 101 and addr_x < 40 and addr_y > 80:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                prev_address = 102
+                if next_address == prev_address:
+                    stop_flag = True
+                    kit.continuous_servo[0].throttle = 0
+                    kit.continuous_servo[1].throttle = 0
+                    msg = pickle.dumps(int(prev_address))
+                    destconn.send(msg)
+            # detect 103
+            # (305, 125), (315, 135), (302, 77) / (122, 121)
+            elif prev_address == 102 and addr_x > 240 and addr_y > 80:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                prev_address = 103
+                if next_address == prev_address:
+                    stop_flag = True
+                    kit.continuous_servo[0].throttle = 0
+                    kit.continuous_servo[1].throttle = 0
+                    msg = pickle.dumps(int(prev_address))
+                    destconn.send(msg)
+            # detect 201
+            # (287, 123), (302, 131), (309, 124), (294, 83)
+            elif prev_address == 103 and addr_x > 280 and addr_y > 80:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                prev_address = 201
+                if next_address == prev_address:
+                    stop_flag = True
+                    kit.continuous_servo[0].throttle = 0
+                    kit.continuous_servo[1].throttle = 0
+                    msg = pickle.dumps(int(prev_address))
+                    destconn.send(msg)
+            
+            # detect 202
+            # (49, 126), (64, 123), (41, 131), (42, 129)
+            elif prev_address == 201 and addr_y > 100:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                prev_address = 202
+                if next_address == prev_address:
+                    stop_flag = True
+                    kit.continuous_servo[0].throttle = 0
+                    kit.continuous_servo[1].throttle = 0
+                    msg = pickle.dumps(int(prev_address))
+                    destconn.send(msg)
+            # detect 203
+            # (236, 126), (238, 123), (240, 126)
+            elif prev_address == 202 and addr_y > 120:
+                print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
+                prev_address = 203
+                if next_address == prev_address:
+                    stop_flag = True
+                    kit.continuous_servo[0].throttle = 0
+                    kit.continuous_servo[1].throttle = 0
+                    msg = pickle.dumps(int(prev_address))
+                    destconn.send(msg)
+            '''
+            if left is None or right is None:
+                kit.continuous_servo[0].throttle = prev_right
+                kit.continuous_servo[1].throttle = prev_left
+            else:
+                kit.continuous_servo[0].throttle = right
+                kit.continuous_servo[1].throttle = left
+                prev_right = right
+                prev_left = left
+
+        '''
+        if next_address is not None:
+            print("Previous address: %d, Next address: %d" % (prev_address, next_address))
+        '''
 
         # 추출한 이미지를 String 형태로 변환(인코딩)시키는 과정
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
@@ -153,7 +282,8 @@ def vision():
 def delivery():
     global next_address, stop_flag
     while True:
-        next_address = destconn.recv(4).decode('ascii')
+        next_address = pickle.loads(destconn.recv(16))
+        print(next_address)
         if next_address == 'q':
             kit.continuous_servo[0].throttle = 0
             kit.continuous_servo[1].throttle = 0
@@ -164,15 +294,18 @@ def delivery():
 
 
 if __name__ == "__main__":
-    # Get the hostname and IP address of this machine and display it.
-    host_name = socket.gethostname()
-    host_ip = socket.gethostbyname(socket.gethostname())
+    # global variable
+    prev_address = 0
+    next_address = None
+    stop_flag = True
+    prev_left, prev_right = 0.0, 0.0
 
     # OperatorUI IP
-    operator_ip = "128.237.205.111"
+    # operator_ip = "172.26.220.250"
+    operator_ip = "128.237.190.108"
 
     # Viewer IP
-    viewer_ip = "128.237.205.111"
+    viewer_ip = "128.237.190.108"
 
     # image
     cap = cv2.VideoCapture(0)
@@ -186,12 +319,7 @@ if __name__ == "__main__":
 
     # socket for receiving next destination and sending current address
     destconn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    destconn.connect((operator_ip, 2048))
-
-    # global variable
-    current_address = 0000
-    next_address = None
-    stop_flag = True
+    destconn.connect((operator_ip, 1200))
 
     t1 = threading.Thread(target=vision)
     t2 = threading.Thread(target=delivery)
