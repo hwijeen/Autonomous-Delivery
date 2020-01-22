@@ -25,6 +25,5 @@ sql = '''CREATE TABLE items(
       address int(3))'''
 
 cursor.execute(sql)
-# cursor.commit()
 
 cursor.close()
