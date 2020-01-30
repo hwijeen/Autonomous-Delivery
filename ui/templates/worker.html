@@ -66,7 +66,7 @@
                 table.find("tbody tr").remove();
 
                 for (var i=0; i<table_len; i++){
-                    table.append("<tr><td>" + deliv_list[i]['id'] + "</td><td>" + deliv_list[i]['addr'] + '</td><td>' + 
+                    table.append("<tr><td>" + deliv_list[i]['addr'] + '</td><td>' + 
                      deliv_list[i]['red'] + "</td><td>" + deliv_list[i]['green'] + "</td><td>" + deliv_list[i]['blue'] + '</td></tr>')
                 }
                 console.log(table_len);
@@ -159,7 +159,6 @@
                             <table class="table table-bordered" id="delivery_list" width="100%" cellspacing="0" style="text-align:center;">
                                             <thead>
                                             <tr>
-                                                <th id="bgc">id</th>
                                                 <th id="bgc">address</th>
                                                 <th id="bgc_red">R</th>
                                                 <th id="bgc_green">G</th>
