@@ -22,35 +22,126 @@
         <script>
         	var socket = io.connect();
 
+        	// send data to Python from html
 			function robot_go(){
-		    	socket.emit('robot_go', {data:"d"});
+		    	socket.emit('status_change', "delivering");
 			}
 
 			function maint(){
-		    	socket.emit('maint', {data:"m"});
+		    	socket.emit('status_change', "maintenance");
 			}
 
 			// var socket = io('http://127.0.0.1:5000/index');
 
+			// receive data to html from python
+			// confirm connection (start conenction)
 			socket.on('connect', function(){
 				console.log("Connected");
-				// while 문으로 3초마다 반복
-				socket.emit("request");
-
+				// socket.emit("request");
 			});
 
-			socket.on('request', function(inv){
+
+			socket.on("curr_deliv", function(curr_deliv){
+				if(curr_deliv == null){
+					console.log("curr_deliv empty")
+				}
+				else{
+					$('#curr_deliv_add').text(curr_deliv['addr']);
+					$('#curr_deliv_r').text(curr_deliv['red']);
+					$('#curr_deliv_g').text(curr_deliv['green']);
+					$('#curr_deliv_b').text(curr_deliv['blue']);
+					// socket.emit("request1");
+				}
+			})
+
+			socket.on("deliv_prog", function(deliv_prog){
+				if(deliv_prog == null){
+					console.log("deliv_prog empty")
+				}
+				else{
+					$('#num_pending').text(deliv_prog['num_pending']);
+					$('#num_compl').text(deliv_prog['num_complete']);
+					$('#total_orders').text(deliv_prog['total_orders']);
+					// socket.emit("request2");
+				}
+			})
+
+			socket.on("deliv_status_list", function(deliv_status_list){
+				var table_len = deliv_status_list.length;
+				var table = $('#delivery_list');
+				// console.log(deliv_status_list[0]['id']);
+				table.find("tbody tr").remove();
+
+				for (var i=0; i<table_len; i++){
+					table.append("<tr><td>" + deliv_status_list[i]['id'] + "</td><td>" + deliv_status_list[i]['addr'] + '</td><td>' + 
+					 deliv_status_list[i]['red'] + "</td><td>" + deliv_status_list[i]['green'] + "</td><td>" + deliv_status_list[i]['blue'] +
+					 "</td><td>" + deliv_status_list[i]['status'] + '</td></tr>')
+				}
+				console.log(table_len);
+				// socket.emit("request3");
+			})
+
+			socket.on('inv', function(inv){
 				if(inv == null){
 					console.log("inv empty")
 				}
 				else{
-					$('#inv_r').text("red: " + inv["red"]);
-					$('#inv_g').text("green: " + inv["green"]);
-					$('#inv_b').text("blue: " + inv["blue"]);
-					$('#inv_sum').text("Sum: " + inv["sum"]);
+					$('#inv_r').text(inv["red"]);
+					$('#inv_g').text(inv["green"]);
+					$('#inv_b').text(inv["blue"]);
+					$('#inv_sum').text(inv["sum"]);
 					console.log(inv);
-		}
+					// socket.emit("request4");
+				}
 			});
+
+			socket.on('robot_inv', function(robot_inv){
+				if(robot_inv == null){
+					console.log("robot inv empty")					
+				}
+				else{
+					$('#rbinv_r').text(robot_inv["red"]);
+					$('#rbinv_g').text(robot_inv["green"]);
+					$('#rbinv_b').text(robot_inv["blue"]);
+					$('#rbinv_sum').text(robot_inv["sum"]);
+					console.log(robot_inv);
+					// socket.emit("request5");
+				}
+			})
+
+			socket.on('info', function(info){
+				if(info == null){
+					console.log("robot info null")
+				}
+				else{
+					var robot_status = info["status"];
+					console.log(robot_status);
+					if (robot_status == "delivering"){
+						$('#status_delivering').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+					}
+					else if (robot_status == "maintenance"){
+						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_maint').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+					}
+					else if (robot_status == "obstacle"){
+						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_obstacle').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+					}
+					else{
+						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_arrived').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+					}
+				}
+			})
 
 		</script>
 
@@ -118,9 +209,10 @@
                             <div class="card">
                                 <div class="card-body">
                                     <h5 class='card-title'>Robot Status</h5>
-                                    <p class='card-text' ><div id="status-indicator-active"></div> moving</p>
-                                    <p class='card-text' ><div id="status-indicator-inactive"></div> maintenance</p>
-                                    <p class='card-text' ><div id="status-indicator-inactive"></div> stop</p>
+	                                    <ul id="status_delivering">delivering</ul>
+	                                    <ul id="status_maint">Maintenance</ul>
+	                                    <ul id="status_obstacle">Obstacle</ul>
+	                                    <ul id="status_arrived">Arrived</ul>
                                     <hr>
                                     <!-- <button type="button" class="btn btn-success btn-lg btn-block">Go</button> -->
                                     <!-- <button type="button" class="btn btn-danger btn-lg btn-block">Maintenance</button> -->
@@ -134,32 +226,28 @@
                             <div class="card">
                                 <div class="card-body", style="padding-bottom:1px;">
 <!--                                 	<h5 class='card-title'></h5> -->
-                                	<div class="card-text">처리한 order / 전체 order</div>
+                                    <h5 class='card-title'>Current Delivery</h5>
+                                       <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
+                                        <tbody>
+                                            <tr>
+                                                <td><span id='curr_deliv_add'></span></td>
+                                                <td id="bgc_red"> <span id='curr_deliv_r'></span> </td>
+                                                <td id="bgc_green"> <span id='curr_deliv_g'></span></td>
+                                                <td id="bgc_blue"><span id='curr_deliv_b'></span> </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
 
-                                    <h5 class='card-title'>Latest Address</h5>
-                                       <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
-                                        <tbody>
-                                            <tr>
-                                                <td>{{ lts_address }}</td>
-<!--                                                 <td id="bgc_red">3</td>
-                                                <td id="bgc_green">5</td>
-                                                <td id="bgc_blue">1</td> -->
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="card-body", style="padding-bottom:1px; padding-top:0px;">
-                                    <h5 class='card-title'>Next Delivery</h5>
-                                       <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
-                                        <tbody>
-                                            <tr>
-                                                <td>{{ next_dilv['address'] }}</td>
-                                                <td id="bgc_red">{{ next_dilv['red'] }}</td>
-                                                <td id="bgc_green">{{ next_dilv['green'] }}</td>
-                                                <td id="bgc_blue">{{ next_dilv['blue'] }}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                    <hr width="340px;" size="20"> 
+                                    <br>
+
+                                    <h5 class='card-title'>Delivering Progress</h5>
+                                        <ul>
+                                    		<li>Pending orders: <span id='num_pending'></span> </li>
+                                    		<li>Completed orders: <span id='num_compl'></span></li>
+                                    		<li>Total orders: <span id='total_orders'></span></li>
+                                    	</ul>
+
                                 </div>
                             </div>
 
@@ -198,16 +286,14 @@
                                         	</thead>
 
                                         	<tbody>
-                                        	{% for i in range(0, len_dilv_list) %}
-                                            <tr>
-                                                <td>1</td>
-                                                <td>{{ dilv_list[i]["address"] }}</td>
-                                                <td>{{ dilv_list[i]["red"] }}</td>
-                                                <td>{{ dilv_list[i]["green"] }}</td>
-                                                <td>{{ dilv_list[i]["blue"] }}</td>
-                                                <td>done</td>
-											{% endfor %}				
-                                            </tr>
+<!--                                             <tr>
+                                                <td><span id="deliv_list_id"></span></td>
+                                                <td><span id="deliv_list_addr"></span></td>
+                                                <td><span id="deliv_list_r"></span></td>
+                                                <td><span id="deliv_list_g"></span></td>
+                                                <td><span id="deliv_list_b"></span></td>
+                                                <td><span id="deliv_list_status"></span></td>				
+                                            </tr> -->
                                             <!-- <tr>
                                                 <td>2</td>
                                                 <td>102</td>
@@ -236,23 +322,25 @@
 
 
 	                                    <!-- <p class='card-text' >red: {{robot_inv['red']}}</p> -->
-	                                    <p class='card-text' id="rbinv_r">Red: </p>
-	                                    <p class='card-text' >Green: {{robot_inv['green']}}</p>
-	                                    <p class='card-text' >Blue: {{robot_inv['blue']}}</p>
+	                                    <p class='card-text' >Red: <span id="rbinv_r"></span></p>
+	                                    <p class='card-text' >Green: <span id="rbinv_g"></span></p>
+	                                    <p class='card-text' >Blue: <span id="rbinv_b"></span></p>
+	                                    <hr width="250px;" size="5"> 
+	                                    <p class='card-text'>Sum: <span id="rbinv_sum"></span></p>
 
-	                                    <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
+	                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                             		</div>
                                     
                                      <div class="column", style="height: 300px;" >
                             			<h5 class='card-title'>Inventory</h5>
-                            			<p class='card-text' id="inv_r" >Red: {{inv['red']}}  <input type="text" name="red_rpln" id="red_rpln" size="3" style="float:right"></p>
-	                                    <p class='card-text' id="inv_g" >Green: {{inv['green']}}  <input type="text" name="green_rpln" id="green_rpln" size="3" style="float:right"></p>
-	                                    <p class='card-text' id="inv_b">Blue: {{inv['blue']}}  <input type="text" name="blue_rpln" id="blue_rpln" size="3" style="float:right"></p>
+                            			<p class='card-text'>Red: <span id="inv_r"></span> </p>
+	                                    <p class='card-text'>Green: <span id="inv_g"></span> </p>
+	                                    <p class='card-text'>Blue: <span id="inv_b"></span> </p>
 	                                    <hr width="250px;" size="5"> 
-	                                    <p class='card-text' id="inv_sum">Sum:  </p>
-	                                    <input type="button" onClick='javascript:cleartext();' value="update" class="btn btn-info text-center" style="float:right">
+	                                    <p class='card-text'>Sum: <span id="inv_sum"></span>  </p>
+	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right">
 
-	                                    <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
+	                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
 
                             			
                             		</div>
