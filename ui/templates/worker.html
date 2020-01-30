@@ -26,10 +26,72 @@
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
 
         <script>
+            var socket = io.connect();
+
             function robot_go(){
-                var socket = io.connect();
-                socket.emit('robot_go', {data:"d"});
+                socket.emit('delivery_status', "complete");
             }
+            function misdliv(){
+                socket.emit('delivery_status', "misdelivery");
+            }
+            function load_complete(){
+                socket.emit('load_complete');
+            }
+
+            socket.on('connect', function(){
+                console.log("Connected");
+                // socket.emit("request");
+            });
+
+            socket.on("curr_deliv", function(curr_deliv){
+                console.log("RECEVIED DATAS SUCCESFULLY")
+                if(curr_deliv == null){
+                    console.log("curr_deliv empty")
+                }
+                else{
+                    $('#curr_deliv_add').text(curr_deliv['addr']);
+                    $('#curr_deliv_r').text(curr_deliv['red']);
+                    $('#curr_deliv_g').text(curr_deliv['green']);
+                    $('#curr_deliv_b').text(curr_deliv['blue']);
+                }
+                // socket.emit("request6");
+            })
+
+            socket.on("deliv_list_sum", function(deliv_list_sum){
+                var deliv_list = deliv_list_sum["deliv_list"];
+                var rgb_sum = deliv_list_sum["sum"];
+                var table_len = deliv_list.length;
+                var table = $('#delivery_list');
+                // console.log(deliv_status_list[0]['id']);
+                table.find("tbody tr").remove();
+
+                for (var i=0; i<table_len; i++){
+                    table.append("<tr><td>" + deliv_list[i]['id'] + "</td><td>" + deliv_list[i]['addr'] + '</td><td>' + 
+                     deliv_list[i]['red'] + "</td><td>" + deliv_list[i]['green'] + "</td><td>" + deliv_list[i]['blue'] + '</td></tr>')
+                }
+                console.log(table_len);
+
+                $('#sum_r').text(rgb_sum['red']);
+                $('#sum_g').text(rgb_sum['green']);
+                $('#sum_b').text(rgb_sum['blue']);
+                // socket.emit("request5");
+            })
+
+            socket.on('info', function(info){
+                if(info == null){
+                    console.log("robot info null")
+                }
+                else{
+                    var robot_status = info["status"];
+                    console.log(robot_status);
+                    if (robot_status == "arrived"){
+                        $('#arrive_alarm').addClass("blink-text");
+                    }
+                    else{
+                        $("#arrive_alarm").removeClass("blink-text").css({"font-weight":"normal", "background-color":"white", "color":"white"});
+                    }
+                }
+            })
 
             
         </script>
@@ -106,26 +168,19 @@
                                             </thead>
 
                                             <tbody>
-                                            {% for i in range(0, len_dilv_list) %}
-                                            <tr>
-                                                <td>1</td>
-                                                <td>{{ dilv_list[i]["address"] }}</td>
-                                                <td class='r'>{{ dilv_list[i]["red"] }}</td>
-                                                <td class='g'>{{ dilv_list[i]["green"] }}</td>
-                                                <td class='b'>{{ dilv_list[i]["blue"] }}</td>
-                                            {% endfor %}
-                                            </tr>
+
                                                 
                                             <tfoot>
                                                 <td colspan="2">sum</td>
-                                                <td>{{loader_rgb['red']}}</td>
-                                                <td>{{loader_rgb['green']}}</td>
-                                                <td>{{loader_rgb['blue']}}</td>
+                                                <td id="sum_r"></td>
+                                                <td id="sum_g"></td>
+                                                <td id="sum_b"></td>
                                             </tfoot>
+
                                             </tbody>
                                         </table>
                                         <div class="text-center">
-                                        <input type="submit" class="btn btn-info text-center" value="Complete Load", onclick="robot_go();">
+                                        <input type="submit" class="btn btn-info text-center" value="Complete Load", onclick="load_complete();">
                                         <!-- <input type="submit" class="btn btn-success btn-lg btn-block" name="Go" value="Go" onclick="robot_go();"> -->
                                         </div>
 
@@ -134,32 +189,26 @@
 
                           <div class="column">
                             <h2> Unloader </h2>
+                            
+                            <br>
+                            <div id="arrive_alarm"> Robot Arrived </div>
                             <br>
 
-                            <h5 class='card-title'>Latest Delivery</h5>
-                                       <table class="table table-bordered" width="10px" , style="text-align:center;">
-                                        <tbody>
-                                            <tr >
-                                                <td width="25%">101</td>
-                                                <td id="bgc_red" width="25%" >3</td>
-                                                <td id="bgc_green" width="25%">5</td>
-                                                <td id="bgc_blue" width="25%">1</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-<!--                                     <h5 class='card-title'>Next Delivery</h5>
+                            <h5 class='card-title'>Current Delivery</h5>
                                        <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
                                         <tbody>
                                             <tr>
-                                                <td width="25%">103</td>
-                                                <td id="bgc_red" width="25%">3</td>
-                                                <td id="bgc_green" width="25%">0</td>
-                                                <td id="bgc_blue" width="25%">5</td>
+                                                <td><span id='curr_deliv_add'></span></td>
+                                                <td id="bgc_red"> <span id='curr_deliv_r'></span> </td>
+                                                <td id="bgc_green"> <span id='curr_deliv_g'></span></td>
+                                                <td id="bgc_blue"><span id='curr_deliv_b'></span> </td>
                                             </tr>
                                         </tbody>
-                                    </table> -->
+                                    </table>
+
                                     <div class="text-center">
-                                    <input type="submit" class="btn btn-info text-center" value="Complete Unload", onclick="robot_go();">
+                                    <input type="submit" class="btn btn-info text-center" value="Unload Complete", onclick="robot_go();">
+                                    <input type="submit" class="btn btn-danger text-center" value="Misdelivery", onclick="misdliv();">
                                     <!-- <button type="button" class="btn btn-info text-center">Complete Unload</button></div> -->
 
                             
