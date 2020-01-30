@@ -52,6 +52,22 @@
 }
 
 
+.blink-text{
+    color: #000;
+    font-weight: bold;
+    /*display:inline-block;*/
+    font-size: 2rem;
+    animation: blinkingText 2s infinite;
+  }
+
+  @keyframes blinkingText{
+    0%    { color: #10c018;}
+    25%   { color: #1056c0;}
+    50%   { color: #ef0a1a;}
+    75%   { color: #254878;}
+    100%  { color: #04a1d5;}
+  }
+
 
 :root {
   --blue: #007bff;
