@@ -77,12 +77,12 @@
                 // socket.emit("request5");
             })
 
-            socket.on('info', function(info){
-                if(info == null){
-                    console.log("robot info null")
+            socket.on('robot_status', function(robot_status){
+                if(robot_status == null){
+                    console.log("robot robot_status null")
                 }
                 else{
-                    var robot_status = info["status"];
+                    var robot_status = robot_status["status"];
                     console.log(robot_status);
                     if (robot_status == "arrived"){
                         $('#arrive_alarm').addClass("blink-text");
