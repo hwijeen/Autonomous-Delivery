@@ -41,17 +41,19 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 
-@socketio.on('robot_go')
-def robot_go_py(json):
+@socketio.on('status_change')
+def status_change(json):
     print('received msg: ' + str(json))
 
-@socketio.on('maint')
-def maint_py(json):
+
+@socketio.on('delivery_status')
+def delivery_status(json):
     print('received msg: ' + str(json))
 
-def some_function():
-    socketio.emit('some event', {'data': 42})
 
+@socketio.on('load_complete')
+def load_complete():
+    print('load complete received')
 
 @app.route('/index')
 def index():
@@ -65,21 +67,12 @@ def index():
         "green": "1",
         "blue": "1"}
 
-    lts_address = '201'
-
-    next_dilv = {
-        'address': '101',
-        'red' : '5',
-        'green' : '5',
-        'blue' : '5'
-    }
-
-    dilv_list = [{'address': '101', 'red':'5', 'green':'5', 'blue':'7'},
-                  {'address': '102', 'red':'3', 'green':'3', 'blue':'3'}]
+    dilv_list = [{'addr': '101', 'red':'5', 'green':'5', 'blue':'7'},
+                  {'addr': '102', 'red':'3', 'green':'3', 'blue':'3'}]
 
     robot_status = 'd'
 
-    return render_template("index.html", robot_inv=robot_inv, lts_address=lts_address, inv=inv, next_dilv=next_dilv,
+    return render_template("index.html", robot_inv=robot_inv, inv=inv,
                            dilv_list=dilv_list, len_dilv_list=len(dilv_list), robot_status=robot_status)
 
 
@@ -106,30 +99,78 @@ def worker():
     # cursor.execute("select * from orders")
     # data = cursor.fetchall()
     # value=data
-    dilv_list = [{'address': '101', 'red':'5', 'green':'5', 'blue':'7'},
-                  {'address': '102', 'red':'3', 'green':'3', 'blue':'3'}]
 
-    loader_rgb = {
-        "red": "10",
-        "green": "10",
-        "blue": "10"}
-
-    return render_template("worker.html", dilv_list=dilv_list, len_dilv_list=len(dilv_list), loader_rgb=loader_rgb)
+    return render_template("worker.html")
 
 # app.run(host='0.0.0.0', port=60000)
 
+@socketio.on("")
+def update_currdeliv():
+    print("curr_deliv")
+    curr_deliv = {
+        "addr": 102,
+        "red": 4,
+        "green": 4,
+        "blue": 4
+    }
+    emit("curr_deliv", curr_deliv, broadcast=True)
 
-@socketio.on('request')
-def request():
-    print("request")
+@socketio.on("")
+def update_deliv_prog():
+    print("update deliv prog")
+    deliv_prog = {
+        "num_pending": 5,
+        "num_complete": 15,
+        "total_orders": 20
+    }
+    emit("deliv_prog", deliv_prog)
+
+@socketio.on("")
+def update_deliv_status_list():
+    print("update_deliv_status_list")
+    deliv_status_list = [{'id': 1, 'addr': 101, 'red': 5, 'green': 5, 'blue': 7, 'status' : 'complete'},
+                 {'id': 2, 'addr': 102, 'red': 5, 'green': 0, 'blue': 2, 'status' : 'complete'},
+                 {'id': 3, 'addr': 103, 'red': 7, 'green': 1, 'blue': 3, 'status' : 'pending'}]
+    emit("deliv_status_list", deliv_status_list)
+
+@socketio.on('')
+def update_inv():
+    print("update_inv")
     inv = {
-        "red": "21",
-        "green": "11",
-        "blue": "11",
-        "sum": 43}
+        "red": 10,
+        "green": 13,
+        "blue": 2,
+        "sum": 25}
+    emit('inv', inv)
 
-    emit('request', inv)
-    emit('request', inv)
+@socketio.on('')
+def update_robot_inv():
+    print("update robot inv")
+    robot_inv = {
+        "red": 1,
+        "green": 3,
+        "blue": 1,
+        "sum": 5}
+    emit('robot_inv', robot_inv)
+
+@socketio.on('')
+def update_robot_status():
+    print("update_robot_status")
+    info = {
+        "addr": 1,
+        "status": "delivering"}
+    # status=["delivering", "maintenance", "obstacle", "arrived"]
+    emit('info', info)
+
+@socketio.on('')
+def update_deliv_list_sum():
+    print("update_deliv_list_sum")
+    deliv_list_sum = { "deliv_list": [{'id': 1, 'addr': 101, 'red': 5, 'green': 5, 'blue': 7},
+                                    {'id': 2, 'addr': 102, 'red': 5, 'green': 0, 'blue': 2},
+                                    {'id': 3, 'addr': 103, 'red': 7, 'green': 1, 'blue': 3}],
+                        "sum": {"red": 12, "green": 6, "blue": 12}}
+    emit('deliv_list_sum', deliv_list_sum)
+
 
 if __name__ == "__main__":
     # socketio.run(app)
