@@ -37,7 +37,7 @@
 			// confirm connection (start conenction)
 			socket.on('connect', function(){
 				console.log("Connected");
-				// socket.emit("request");
+				socket.emit("request");
 			});
 
 
@@ -50,7 +50,7 @@
 					$('#curr_deliv_r').text(curr_deliv['red']);
 					$('#curr_deliv_g').text(curr_deliv['green']);
 					$('#curr_deliv_b').text(curr_deliv['blue']);
-					// socket.emit("request1");
+					socket.emit("request1");
 				}
 			})
 
@@ -62,7 +62,7 @@
 					$('#num_pending').text(deliv_prog['num_pending']);
 					$('#num_compl').text(deliv_prog['num_complete']);
 					$('#total_orders').text(deliv_prog['total_orders']);
-					// socket.emit("request2");
+					socket.emit("request2");
 				}
 			})
 
@@ -109,12 +109,12 @@
 				}
 			})
 
-			socket.on('info', function(info){
-				if(info == null){
-					console.log("robot info null")
+			socket.on('robot_status', function(robot_status){
+				if(robot_status == null){
+					console.log("robot robot_status null")
 				}
 				else{
-					var robot_status = info["status"];
+					var robot_status = robot_status["status"];
 					console.log(robot_status);
 					if (robot_status == "delivering"){
 						$('#status_delivering').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
@@ -320,14 +320,12 @@
 	                                    <h5 class='card-title'>Robot inventory</h5>
 
 
-	                                    <!-- <p class='card-text' >red: {{robot_inv['red']}}</p> -->
 	                                    <p class='card-text' >Red: <span id="rbinv_r"></span></p>
 	                                    <p class='card-text' >Green: <span id="rbinv_g"></span></p>
 	                                    <p class='card-text' >Blue: <span id="rbinv_b"></span></p>
 	                                    <hr width="250px;" size="5"> 
 	                                    <p class='card-text'>Sum: <span id="rbinv_sum"></span></p>
 
-	                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
                             		</div>
                                     
                                      <div class="column", style="height: 300px;" >
@@ -338,9 +336,6 @@
 	                                    <hr width="250px;" size="5"> 
 	                                    <p class='card-text'>Sum: <span id="inv_sum"></span>  </p>
 	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right">
-
-	                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
-
                             			
                             		</div>
 
