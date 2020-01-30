@@ -10,97 +10,141 @@
 
         <!-- local에서 실험할 때만 쓰는 css -->
         <!-- <link href="css/styles.css" rel="stylesheet" /> -->
+        <!-- <meta http-equiv="refresh" content="2"> -->
 
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}" />
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/tables.css') }}" />
-        <!-- <link href="https://cdn.datatables.net/1.10.20/css/dataTables.bootstrap4.min.css" rel="stylesheet" crossorigin="anonymous" /> -->
-
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
         <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
-        <!-- <script src="{{ url_for('static', filename='js/datatables-demo.js') }}"></script> -->
-        <script src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
-        <!-- <script src="{{ url_for('static', filename='js/jsquery.dataTables.min.js') }}"></script> -->
-        <!-- <script src="{{ url_for('static', filename='js/dataTables.bootstrap4.min.js') }}"></script> -->
-
         <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
 
         <script>
-            var socket = io.connect();
+        	var socket = io.connect();
 
-            function robot_go(){
-                socket.emit('delivery_status', "complete");
-            }
-            function misdliv(){
-                socket.emit('delivery_status', "misdelivery");
-            }
-            function load_complete(){
-                socket.emit('load_complete');
-            }
+        	// send data to Python from html
+			function robot_go(){
+		    	socket.emit('status_change', "delivering");
+			}
 
-            socket.on('connect', function(){
-                console.log("Connected");
-                // socket.emit("request");
-            });
+			function maint(){
+		    	socket.emit('status_change', "maintenance");
+			}
 
-            socket.on("curr_deliv", function(curr_deliv){
-                console.log("RECEVIED DATAS SUCCESFULLY")
-                if(curr_deliv == null){
-                    console.log("curr_deliv empty")
-                }
-                else{
-                    $('#curr_deliv_add').text(curr_deliv['addr']);
-                    $('#curr_deliv_r').text(curr_deliv['red']);
-                    $('#curr_deliv_g').text(curr_deliv['green']);
-                    $('#curr_deliv_b').text(curr_deliv['blue']);
-                }
-                // socket.emit("request6");
-            })
+			// var socket = io('http://127.0.0.1:5000/index');
 
-            socket.on("deliv_list_sum", function(deliv_list_sum){
-                var deliv_list = deliv_list_sum["deliv_list"];
-                var rgb_sum = deliv_list_sum["sum"];
-                var table_len = deliv_list.length;
-                var table = $('#delivery_list');
-                // console.log(deliv_status_list[0]['id']);
-                table.find("tbody tr").remove();
+			// receive data to html from python
+			// confirm connection (start conenction)
+			socket.on('connect', function(){
+				console.log("Connected");
+				// socket.emit("request");
+			});
 
-                for (var i=0; i<table_len; i++){
-                    table.append("<tr><td>" + deliv_list[i]['addr'] + '</td><td>' + 
-                     deliv_list[i]['red'] + "</td><td>" + deliv_list[i]['green'] + "</td><td>" + deliv_list[i]['blue'] + '</td></tr>')
-                }
-                console.log(table_len);
 
-                $('#sum_r').text(rgb_sum['red']);
-                $('#sum_g').text(rgb_sum['green']);
-                $('#sum_b').text(rgb_sum['blue']);
-                // socket.emit("request5");
-            })
+			socket.on("curr_deliv", function(curr_deliv){
+				if(curr_deliv == null){
+					console.log("curr_deliv empty")
+				}
+				else{
+					$('#curr_deliv_add').text(curr_deliv['addr']);
+					$('#curr_deliv_r').text(curr_deliv['red']);
+					$('#curr_deliv_g').text(curr_deliv['green']);
+					$('#curr_deliv_b').text(curr_deliv['blue']);
+					// socket.emit("request1");
+				}
+			})
 
-            socket.on('info', function(info){
-                if(info == null){
-                    console.log("robot info null")
-                }
-                else{
-                    var robot_status = info["status"];
-                    console.log(robot_status);
-                    if (robot_status == "arrived"){
-                        $('#arrive_alarm').addClass("blink-text");
-                    }
-                    else{
-                        $("#arrive_alarm").removeClass("blink-text").css({"font-weight":"normal", "background-color":"white", "color":"white"});
-                    }
-                }
-            })
+			socket.on("deliv_prog", function(deliv_prog){
+				if(deliv_prog == null){
+					console.log("deliv_prog empty")
+				}
+				else{
+					$('#num_pending').text(deliv_prog['num_pending']);
+					$('#num_compl').text(deliv_prog['num_complete']);
+					$('#total_orders').text(deliv_prog['total_orders']);
+					// socket.emit("request2");
+				}
+			})
 
-            
-        </script>
-        
+			socket.on("deliv_status_list", function(deliv_status_list){
+				var table_len = deliv_status_list.length;
+				var table = $('#delivery_list');
+				// console.log(deliv_status_list[0]['id']);
+				table.find("tbody tr").remove();
 
-        <!-- <meta http-equiv="refresh" content='2'>  #refresh -->
+				for (var i=0; i<table_len; i++){
+					table.append("<tr><td>" + deliv_status_list[i]['addr'] + '</td><td>' + 
+					 deliv_status_list[i]['red'] + "</td><td>" + deliv_status_list[i]['green'] + "</td><td>" + deliv_status_list[i]['blue'] +
+					 "</td><td>" + deliv_status_list[i]['status'] + '</td></tr>')
+				}
+				console.log(table_len);
+				// socket.emit("request3");
+			})
 
-        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/js/all.min.js" crossorigin="anonymous"></script> -->
-        <!-- <script src="{{ url_for('static', filename='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/js/all.min.js') }}"></script> -->
+			socket.on('inv', function(inv){
+				if(inv == null){
+					console.log("inv empty")
+				}
+				else{
+					$('#inv_r').text(inv["red"]);
+					$('#inv_g').text(inv["green"]);
+					$('#inv_b').text(inv["blue"]);
+					$('#inv_sum').text(inv["sum"]);
+					console.log(inv);
+					// socket.emit("request4");
+				}
+			});
+
+			socket.on('robot_inv', function(robot_inv){
+				if(robot_inv == null){
+					console.log("robot inv empty")					
+				}
+				else{
+					$('#rbinv_r').text(robot_inv["red"]);
+					$('#rbinv_g').text(robot_inv["green"]);
+					$('#rbinv_b').text(robot_inv["blue"]);
+					$('#rbinv_sum').text(robot_inv["sum"]);
+					console.log(robot_inv);
+					// socket.emit("request5");
+				}
+			})
+
+			socket.on('info', function(info){
+				if(info == null){
+					console.log("robot info null")
+				}
+				else{
+					var robot_status = info["status"];
+					console.log(robot_status);
+					if (robot_status == "delivering"){
+						$('#status_delivering').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+					}
+					else if (robot_status == "maintenance"){
+						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_maint').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+					}
+					else if (robot_status == "obstacle"){
+						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_obstacle').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+					}
+					else{
+						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+						$('#status_arrived').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+					}
+				}
+			})
+
+		</script>
+
 
     </head>
 
@@ -133,8 +177,8 @@
                     <div class="sb-sidenav-menu">
                         <div class="nav">
                             <div class="sb-sidenav-menu-heading">Section</div>
-                            <a class="nav-link" href="index"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Admin</a>
-                            <a class="nav-link" href="worker"style="background-color: #ADD8E6; color: black;"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Worker</a>
+                            <a class="nav-link" href="index" style="background-color: #ADD8E6; color: black;"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Admin</a>
+                            <a class="nav-link" href="worker"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Worker</a>
 
                             <div class="sb-sidenav-menu-heading">Addons</div>
                             <a class="nav-link" href="charts.html"
@@ -151,49 +195,38 @@
             <div id="layoutSidenav_content" style="padding-left:150px;">
                 <main>
                     <div class="container-fluid">
-                        <h1 class="mt-4">Worker UI</h1>
-                        <hr width="1200px;" color="black" size="10"> 
+                        <h1 class="mt-4">Admin UI</h1>
                         <!-- <input type="button" class="btn btn-danger" value = "SELECT" onclick="location.href='select'">SHOW DB</input> -->
-                        <div class="column" style="border-right-style: solid; border-color: black;">
-                            <h2> Loader </h2>
-                            <table class="table table-bordered" id="delivery_list" width="100%" cellspacing="0" style="text-align:center;">
-                                            <thead>
-                                            <tr>
-                                                <th id="bgc">address</th>
-                                                <th id="bgc_red">R</th>
-                                                <th id="bgc_green">G</th>
-                                                <th id="bgc_blue">B</th>
-                                            </tr>
-                                            </thead>
+                        <br>
 
-                                            <tbody>
+                        <div class='card-deck', style="margin-bottom:15px; max-width:90rem;">
+                            <div class="card" style="width: 200rem;">
+                                <div class="card-body">
+                                    <h5 class='card-title'>Robot View</h5>
 
-                                                
-                                            <tfoot>
-                                                <td colspan="2">sum</td>
-                                                <td id="sum_r"></td>
-                                                <td id="sum_g"></td>
-                                                <td id="sum_b"></td>
-                                            </tfoot>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class='card-title'>Robot Status</h5>
+	                                    <ul id="status_delivering">delivering</ul>
+	                                    <ul id="status_maint">Maintenance</ul>
+	                                    <ul id="status_obstacle">Obstacle</ul>
+	                                    <ul id="status_arrived">Arrived</ul>
+                                    <hr>
+                                    <!-- <button type="button" class="btn btn-success btn-lg btn-block">Go</button> -->
+                                    <!-- <button type="button" class="btn btn-danger btn-lg btn-block">Maintenance</button> -->
 
-                                            </tbody>
-                                        </table>
-                                        <div class="text-center">
-                                        <input type="submit" class="btn btn-info text-center" value="Complete Load", onclick="load_complete();">
-                                        <!-- <input type="submit" class="btn btn-success btn-lg btn-block" name="Go" value="Go" onclick="robot_go();"> -->
-                                        </div>
+                                    <input type="submit" class="btn btn-success btn-lg btn-block" name="Go" value="Go" onclick="robot_go();">
+                                    <input type="submit" class="btn btn-danger btn-lg btn-block" name="Maintenance" value="Maintenance" onclick="maint();">
 
 
-                        </div>
-
-                          <div class="column">
-                            <h2> Unloader </h2>
-                            
-                            <br>
-                            <div id="arrive_alarm"> Robot Arrived </div>
-                            <br>
-
-                            <h5 class='card-title'>Current Delivery</h5>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-body", style="padding-bottom:1px;">
+<!--                                 	<h5 class='card-title'></h5> -->
+                                    <h5 class='card-title'>Current Delivery</h5>
                                        <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
                                         <tbody>
                                             <tr>
@@ -205,16 +238,137 @@
                                         </tbody>
                                     </table>
 
-                                    <div class="text-center">
-                                    <input type="submit" class="btn btn-info text-center" value="Unload Complete", onclick="robot_go();">
-                                    <input type="submit" class="btn btn-danger text-center" value="Misdelivery", onclick="misdliv();">
-                                    <!-- <button type="button" class="btn btn-info text-center">Complete Unload</button></div> -->
+                                    <hr width="340px;" size="20"> 
+                                    <br>
 
-                            
+                                    <h5 class='card-title'>Delivering Progress</h5>
+                                        <ul>
+                                    		<li>Pending orders: <span id='num_pending'></span> </li>
+                                    		<li>Completed orders: <span id='num_compl'></span></li>
+                                    		<li>Total orders: <span id='total_orders'></span></li>
+                                    	</ul>
+
+                                </div>
+                            </div>
+
+
+<!--                             <div class="card">
+                                <div class="card-body">
+                                    <h5 class='card-title'>Robot inventory</h5>
+                                    <p class='card-text'><font color="red">Red: 11</font></p>
+                                    <p class='card-text'><font color="blue">Blue: 2</font></p>
+                                    <p class='card-text'><font color="green">Green: 8</font></p>
+                                </div> -->
+                               <!--  <div class="card-body">
+                                    <h5 class='card-title'>Current inventory</h5>
+                                    <p class='card-text'><font color="red">Red: 9</font></p>
+                                    <p class='card-text'><font color="blue">Blue: 11</font></p>
+                                    <p class='card-text'><font color="green">Green: 8</font></p>
+                                </div> -->
+                            </div>
+
+                            <!-- Second row -->
+
+                            <div class='card-deck', style="margin-bottom:15px; max-width:90rem;">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class='card-title'>Now Delivering (ith turn)</h5>
+		                                <table class="table table-bordered" id="delivery_list" width="100%" cellspacing="0" style="text-align:center;">
+		                                    <thead>
+                                            <tr>
+                                                <th id="bgc">address</th>
+                                                <th id="bgc_red">R</th>
+                                                <th id="bgc_green">G</th>
+                                                <th id="bgc_blue">B</th>
+                                                <th id="bgc">status</th>
+                                            </tr>
+                                        	</thead>
+
+                                        	<tbody>
+<!--                                             <tr>
+                                                <td><span id="deliv_list_id"></span></td>
+                                                <td><span id="deliv_list_addr"></span></td>
+                                                <td><span id="deliv_list_r"></span></td>
+                                                <td><span id="deliv_list_g"></span></td>
+                                                <td><span id="deliv_list_b"></span></td>
+                                                <td><span id="deliv_list_status"></span></td>				
+                                            </tr> -->
+                                            <!-- <tr>
+                                                <td>2</td>
+                                                <td>102</td>
+                                                <td>0</td>
+                                                <td>1</td>
+                                                <td>5</td>
+                                                <td>done</td>
+                                            </tr>
+                                            <tr>
+                                                <td>3</td>
+                                                <td>103</td>
+                                                <td>2</td>
+                                                <td>0</td>
+                                                <td>2</td>
+                                                <td>ing</td>
+                                            </tr> -->
+                                        	</tbody>
+                                    	</table>
+
+                                </div>
+                            </div>
+                            <div class="card" style="width: 20px;">
+                                <div class="card-body">
+                                	<div class="column", style="height: 300px;" >
+	                                    <h5 class='card-title'>Robot inventory</h5>
+
+
+	                                    <!-- <p class='card-text' >red: {{robot_inv['red']}}</p> -->
+	                                    <p class='card-text' >Red: <span id="rbinv_r"></span></p>
+	                                    <p class='card-text' >Green: <span id="rbinv_g"></span></p>
+	                                    <p class='card-text' >Blue: <span id="rbinv_b"></span></p>
+	                                    <hr width="250px;" size="5"> 
+	                                    <p class='card-text'>Sum: <span id="rbinv_sum"></span></p>
+
+	                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+                            		</div>
+                                    
+                                     <div class="column", style="height: 300px;" >
+                            			<h5 class='card-title'>Inventory</h5>
+                            			<p class='card-text'>Red: <span id="inv_r"></span> </p>
+	                                    <p class='card-text'>Green: <span id="inv_g"></span> </p>
+	                                    <p class='card-text'>Blue: <span id="inv_b"></span> </p>
+	                                    <hr width="250px;" size="5"> 
+	                                    <p class='card-text'>Sum: <span id="inv_sum"></span>  </p>
+	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right">
+
+	                                    <!-- <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p> -->
+
+                            			
+                            		</div>
+
+                                    
+
+
+
+                                </div>
+
+                        </div>
+
+                            </div>
                         </div>
                     </div>
+                </div>
                 </main>
-
-
+                <!-- <footer class="py-4 bg-light mt-auto"> -->
+                <!-- </footer> -->
+            </div>
+        </div>
+        <!-- <script src="https://code.jquery.com/jquery-3.4.1.min.js" crossorigin="anonymous"></script> -->
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+        <!-- <script src="js/scripts.js"></script> -->
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js" crossorigin="anonymous"></script> -->
+        <!-- <script src="assets/demo/chart-area-demo.js"></script> -->
+        <!-- <script src="assets/demo/chart-bar-demo.js"></script> -->
+        <!-- <script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js" crossorigin="anonymous"></script> -->
+        <!-- <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js" crossorigin="anonymous"></script> -->
+        <!-- <script src="assets/demo/datatables-demo.js"></script> -->
     </body>
 </html>
