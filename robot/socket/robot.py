@@ -1,44 +1,38 @@
 import cv2
 import numpy as np
+import socket
+import pickle
+import threading
 import time
 from adafruit_servokit import ServoKit
 
 import vision
-
+import socket_manager
 
 ADDRESS = {0: {'addr_x': 40, 'addr_y': 120, 'prev_count': 40, 'next_address': 101},
-           101: {'addr_x': 280, 'addr_y': 65, 'prev_count': 45, 'next_address': 102},
+           101: {'addr_x': 280, 'addr_y': 65, 'prev_count': 50, 'next_address': 102},
            102: {'addr_x': 40, 'addr_y': 80, 'prev_count': 55, 'next_address': 103},
            103: {'addr_x': 120, 'addr_y': 40, 'prev_count': 70, 'next_address': 203},
-           203: {'addr_x': 280, 'addr_y': 80, 'prev_count': 55, 'next_address': 202},
-           202: {'addr_x': 80, 'addr_y': 80, 'prev_count': 60, 'next_address': 201}}
-
-
-REV_ADDRESS = {102: {'addr_x': 40, 'addr_y': 120, 'prev_count': 40, 'next_address': 0},
-           103: {'addr_x': 280, 'addr_y': 65, 'prev_count': 50, 'next_address': 101},
-           203: {'addr_x': 40, 'addr_y': 80, 'prev_count': 55, 'next_address': 102},
-           202: {'addr_x': 120, 'addr_y': 40, 'prev_count': 70, 'next_address': 103},
-           201: {'addr_x': 280, 'addr_y': 80, 'prev_count': 65, 'next_address': 203},
-           0: {'addr_x': 80, 'addr_y': 80, 'prev_count': 70, 'next_address': 202}}
+           203: {'addr_x': 280, 'addr_y': 80, 'prev_count': 65, 'next_address': 202},
+           202: {'addr_x': 80, 'addr_y': 80, 'prev_count': 70, 'next_address': 201}}
 
 
 class Robot:
-    def __init__(self, sio):
+    def __init__(self, addrconn, imgconn):
         self.status = {'addr': 0, 'status': 'arrived'}
         self.next_address = None
-        self.orientation = 'clockwise'
 
         self.cap = cv2.VideoCapture(0)
         self.kit = ServoKit(channels=16)
 
-        self.sio = sio
+        self.addrconn = addrconn
+        self.imgconn = imgconn
 
     def control(self):
         count, prev_count = 0, 0
         prev_left, prev_right = 0.0, 0.0
         # Here we loop forever to send messages out to the server via the middleware.
         while self.cap.isOpened():
-            start = time.time()
             # Capture frame-by-frame
             ret, frame = self.cap.read()
             frame = cv2.resize(frame, (320, 240))
@@ -69,7 +63,6 @@ class Robot:
                     self.status['status'] = 'obstacle'
                     self.send_message('info', self.status)
 
-                # elif self.status['addr'] == 201 and stop_y > 210:
                 elif stop_y > 210:
                     self.status['status'] = 'arrived'
                     time.sleep(0.5)
@@ -97,7 +90,7 @@ class Robot:
                     prev_address = self.status['addr']
                     if prev_address in [101, 203]:
                         if addr_x > ADDRESS[prev_address]['addr_x'] and addr_y > ADDRESS[prev_address]['addr_y'] or prev_count > ADDRESS[prev_address]['prev_count']:
-                            if prev_count > ADDRESS[prev_address]['prev_count'] - 15:
+                            if prev_count > 10:
                                 self.status['addr'] = ADDRESS[prev_address]['next_address']
 
                                 print("Arrived at %d" % self.status['addr'])
@@ -116,7 +109,7 @@ class Robot:
 
                     elif prev_address in [0, 102, 103, 202]:
                         if addr_x < ADDRESS[prev_address]['addr_x'] and addr_y > ADDRESS[prev_address]['addr_y'] or prev_count > ADDRESS[prev_address]['prev_count']:
-                            if prev_count > ADDRESS[prev_address]['prev_count'] - 15:
+                            if prev_count > 10:
                                 self.status['addr'] = ADDRESS[prev_address]['next_address']
 
                                 print("Arrived at %d" % self.status['addr'])
@@ -147,12 +140,13 @@ class Robot:
             stringData = data.tostring()
 
             self.send_message('image', stringData)
-            time.sleep(max(0, 0.065 - (time.time() - start)))
-            # print("Sleeping time: %.4f" % (time.time() - start))
+
+            time.sleep(0.01)
 
     def send_message(self, type, msg):
         if type == 'info':
-            self.sio.emit('info', msg)
+            self.addrconn.send(pickle.dumps(msg))
         elif type == 'image':
             # String 형태로 변환한 이미지를 socket을 통해서 전송
-            self.sio.emit('video', msg)
+            self.imgconn.send(bytes(str(len(msg)).ljust(16), 'utf8'))
+            self.imgconn.send(msg)
