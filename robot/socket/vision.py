@@ -4,7 +4,7 @@ import imutils
 
 
 def find_line(image):
-    low_yellow = np.array([20, 40, 65])
+    low_yellow = np.array([20, 45, 65])
     up_yellow = np.array([35, 255, 255])
     mask = cv2.inRange(image, low_yellow, up_yellow)
     edges = cv2.Canny(mask, 50, 150)
@@ -88,10 +88,13 @@ def detect_obstacle(lines):
             tops.append(min(y1, y2))
             bots.append(max(y1, y2))
 
-        if max(angles) > 65.0 and min(angles) < 35.0:
-            if np.abs(tops[np.argmax(angles)] - tops[np.argmin(angles)]) < 15 and np.abs(bots[np.argmax(angles)] - tops[np.argmin(angles)]) < 10:
+        if max(angles) > 65.0 and min(angles) < 30.0:
+            if np.abs(tops[np.argmax(angles)] - tops[np.argmin(angles)]) < 20 and np.abs(bots[np.argmax(angles)] - tops[np.argmin(angles)]) < 20:
                 flag = True
                 print("Obstacle is in the road")
+                print(angles)
+                print(tops)
+                print(bots)
 
     return flag
 
@@ -176,7 +179,7 @@ def detect_stop(image):
 def detect_address(image):
     # lower_green = np.array([40, 0, 50])
     # upper_green = np.array([90, 255, 255])
-    lower_green = np.array([30, 0, 40])
+    lower_green = np.array([30, 10, 40])
     upper_green = np.array([100, 100, 200])
 
     mask = cv2.inRange(image, lower_green, upper_green)

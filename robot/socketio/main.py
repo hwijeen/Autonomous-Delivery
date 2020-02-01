@@ -1,7 +1,4 @@
-import socketio
-import threading
 import time
-import pickle
 
 import robot
 import socket_manager
@@ -11,39 +8,38 @@ class Manager:
     def __init__(self):
         self.socket = socket_manager.Socket()
         self.robot = robot.Robot(self.socket.sio)
-        self.socket.sio.connect('http://localhost:5000')
-        self.socket.sio.on('delivery', self.delivery)
-        self.socket.sio.on('mode', self.receive_mode)
+        self.socket.sio.on('next_addr', self.recv_addr)
+        self.socket.sio.on('status', self.recv_mode)
+        # self.socket.sio.connect('http://172.26.213.218:5000')
+        self.socket.sio.connect('http://172.26.226.35:60000')
 
-    def delivery(self, data):
-        while True:
-            next_address = data
-            if next_address not in [0, 1, 101, 102, 103, 201, 202, 203]:
-                print("wrong message")
-            # instead of maintenance mode
-            elif next_address == 1:
-                self.robot.status['status'] = 'maintenance'
-                self.robot.kit.continuous_servo[0].throttle = 0
-                self.robot.kit.continuous_servo[1].throttle = 0
-            else:
-                self.robot.next_address = next_address
-                self.robot.status['status'] = 'delivering'
-                print(next_address)
+    def recv_addr(self, data):
+        next_address = data
+        if next_address not in [0, 101, 102, 103, 201, 202, 203]:
+            print("wrong message")
+        else:
+            self.robot.next_address = next_address
+            print("Next destination: %d " % next_address)
 
-    def receive_mode(self, data):
-        while True:
-            # go mode
-            if data == 'delivering':
-                self.robot.status['status'] = 'delivering'
-                print("Start delivery")
+    def recv_mode(self, data):
+        # go mode
+        if data == 'delivering':
+            self.robot.status['status'] = 'delivering'
+            print("Start delivery")
 
-            # maintenance mode
-            elif data == 'maintenance':
-                self.robot.status['status'] = 'maintenance'
-                self.robot.kit.continuous_servo[0].throttle = 0
-                self.robot.kit.continuous_servo[1].throttle = 0
-                print("Maintenance mode")
-                time.sleep(1)
+        # maintenance mode
+        elif data == 'maintenance':
+            self.robot.status['status'] = 'maintenance'
+            self.robot.kit.continuous_servo[0].throttle = 0
+            self.robot.kit.continuous_servo[1].throttle = 0
+            print("Maintenance mode")
+
+        elif data == 'misdelivery':
+            self.robot.status['status'] = 'maintenance'
+            self.robot.status['addr'] = 0
+            self.robot.kit.continuous_servo[0].throttle = 0
+            self.robot.kit.continuous_servo[1].throttle = 0
+            print("Miss delivery, maintenance mode")
 
 
 if __name__ == "__main__":

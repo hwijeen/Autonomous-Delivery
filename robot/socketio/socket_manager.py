@@ -9,15 +9,14 @@ class Socket:
         self.sio.on('connect_error', self.connect_error)
 
     def on_connect(self):
-        print("I'm connected!")
+        print("Robot is connected!")
 
     def connect_error(self):
         print("The connection failed!")
 
     def disconnect(self):
-        print("I'm disconnected")
+        print("Robot is disconnected!")
 
 
 if __name__ == '__main__':
     socket = Socket()
-    # socket.sio.emit('my message', {'foo': 'bar'})
