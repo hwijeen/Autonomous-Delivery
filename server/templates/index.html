@@ -31,6 +31,10 @@
 		    	socket.emit('status_change', "maintenance");
 			}
 
+            function replenish(){
+                socket.emit("replenish");
+            }
+
 			// var socket = io('http://127.0.0.1:5000/index');
 
 			// receive data to html from python
@@ -312,7 +316,7 @@
 	                                    <p class='card-text'>Blue: <span id="inv_b"></span> </p>
 	                                    <hr width="250px;" size="5"> 
 	                                    <p class='card-text'>Sum: <span id="inv_sum"></span>  </p>
-	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right">
+	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right" onclick="replenish();">
                             			
                             		</div>
 
