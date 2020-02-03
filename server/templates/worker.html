@@ -65,7 +65,7 @@
                 // socket.emit("request6");
             })
 
-            socket.on("loader", function(deliv_list_sum){
+            socket.on("now_delivering", function(deliv_list_sum){
                 if(deliv_list_sum == null){
                     console.log("deliv_list_sum empty")
                     var table = $('#delivery_list');
@@ -76,6 +76,7 @@
                     
                 }
                 else{
+                    console.log(deliv_list_sum)
                     var deliv_list = deliv_list_sum["deliv_list"];
                     var rgb_sum = deliv_list_sum["sum"];
                     var table_len = deliv_list.length;
@@ -152,13 +153,6 @@
                             <a class="nav-link" href="index"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Admin</a>
                             <a class="nav-link" href="worker"style="background-color: #ADD8E6; color: black;"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Worker</a>
 
-                            <div class="sb-sidenav-menu-heading">Addons</div>
-                            <a class="nav-link" href="charts.html"
-                                ><div class="sb-nav-link-icon"><i class="fas fa-chart-area"></i></div>
-                                Charts</a>
-                                <a class="nav-link" href="tables.html"
-                                ><div class="sb-nav-link-icon"><i class="fas fa-table"></i></div>
-                                Tables</a>
                         </div>
                     </div>
 

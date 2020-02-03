@@ -95,7 +95,7 @@
 					$('#inv_r').text(inv["red"]);
 					$('#inv_g').text(inv["green"]);
 					$('#inv_b').text(inv["blue"]);
-					$('#inv_sum').text(inv["sum"]);
+					//$('#inv_sum').text(inv["sum"]);
 					console.log(inv);
 					// socket.emit("request4");
 				}
@@ -109,7 +109,7 @@
 					$('#rbinv_r').text(robot_inv["red"]);
 					$('#rbinv_g').text(robot_inv["green"]);
 					$('#rbinv_b').text(robot_inv["blue"]);
-					$('#rbinv_sum').text(robot_inv["sum"]);
+					//$('#rbinv_sum').text(robot_inv["sum"]);
 					console.log(robot_inv);
 					// socket.emit("request5");
 				}
@@ -185,13 +185,6 @@
                             <a class="nav-link" href="index" style="background-color: #ADD8E6; color: black;"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Admin</a>
                             <a class="nav-link" href="worker"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Worker</a>
 
-                            <div class="sb-sidenav-menu-heading">Addons</div>
-                            <a class="nav-link" href="charts.html"
-                                ><div class="sb-nav-link-icon"><i class="fas fa-chart-area"></i></div>
-                                Charts</a>
-                                <a class="nav-link" href="tables.html"
-                                ><div class="sb-nav-link-icon"><i class="fas fa-table"></i></div>
-                                Tables</a>
                         </div>
                     </div>
 
@@ -305,8 +298,6 @@
 	                                    <p class='card-text' >Green: <span id="rbinv_g"></span></p>
 	                                    <p class='card-text' >Blue: <span id="rbinv_b"></span></p>
 	                                    <hr width="250px;" size="5"> 
-	                                    <p class='card-text'>Sum: <span id="rbinv_sum"></span></p>
-
                             		</div>
                                     
                                      <div class="column", style="height: 300px;" >
@@ -315,7 +306,6 @@
 	                                    <p class='card-text'>Green: <span id="inv_g"></span> </p>
 	                                    <p class='card-text'>Blue: <span id="inv_b"></span> </p>
 	                                    <hr width="250px;" size="5"> 
-	                                    <p class='card-text'>Sum: <span id="inv_sum"></span>  </p>
 	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right" onclick="replenish();">
                             			
                             		</div>

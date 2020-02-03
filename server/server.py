@@ -24,27 +24,28 @@ def worker():
 
 @socketio.on('request')
 def refresh():
-    global deliv_list, robot
-    to_load = deliv_list.get_deliv_list(drop_status=True, add_sum=True)
-    emit('loader', to_load, broadcast=True)
+    try:
+        global deliv_list, robot
+        now_delivering = deliv_list.to_dict()
 
-    now_delivering = deliv_list.get_deliv_list(drop_status=False, add_sum=False)
-    emit('now_delivering', now_delivering, broadcast=True)
+        emit('now_delivering', now_delivering, broadcast=True)
 
-    curr_deliv = deliv_list.get_curr_deliv(to_dict=True, drop_status=True)
-    emit('curr_deliv', curr_deliv, broadcast=True)
+        curr_deliv = deliv_list.get_curr_deliv()
+        emit('curr_deliv', curr_deliv, broadcast=True)
 
-    robot_inv = robot.inventory.to_dict()
-    emit('robot_inv', robot_inv, broadcast=True)
+        robot_inv = robot.inventory.to_dict()
+        emit('robot_inv', robot_inv, broadcast=True)
 
-    robot_status = robot.get_status()
-    emit('robot_status', robot_status, broadcast=True)
+        robot_status = robot.get_status()
+        emit('robot_status', robot_status, broadcast=True)
 
-    loading_dock_inv = loading_dock.inventory.to_dict()
-    emit('loading_dock_inv', loading_dock_inv, broadcast=True)
+        loading_dock_inv = loading_dock.inventory.to_dict()
+        emit('loading_dock_inv', loading_dock_inv, broadcast=True)
 
-    robot_status = robot.get_status()
-    emit('robot_status', robot_status, broadcast=True) # to admin UI
+        robot_status = robot.get_status()
+        emit('robot_status', robot_status, broadcast=True) # to admin UI
+    except:
+        pass
 
 @socketio.on('connect')
 def connect():
@@ -54,53 +55,45 @@ def connect():
 def disconnect():
     logger.info('Client disconnected')
 
-# QUESTION: when to send delivery_prog??
 @socketio.on('deliv_list')
 def prepare_round(deliv_dict_list):
     global deliv_list, robot
-    rotation = robot.rotation
-    deliv_list.set_from_dict_list(deliv_dict_list, rotation)
-    logger.info(f'Received delivery list from scheduler: {deliv_dict_list}')
+    orientation = robot.orientation
+    now_delivering = deliv_list.set_from_dict_list(deliv_dict_list, orientation)
+    logger.info(f'Received delivery list from scheduler: {now_delivering}')
 
-    to_load = deliv_list.get_deliv_list(drop_status=True, add_sum=True)
-    emit('loader', to_load, broadcast=True)
-    logger.info(f'Sent delivery list sum to worker UI(for loader): {to_load}')
-
-    now_delivering = deliv_list.get_deliv_list(drop_status=False, add_sum=False)
     emit('now_delivering', now_delivering, broadcast=True)
-    logger.info(f'Sent delivery status list to the admin UI: {now_delivering}')
+    logger.info(f'Sent delivery list sum to UI: {now_delivering}')
 
-    curr_deliv = deliv_list.get_curr_deliv(to_dict=True, drop_status=True)
+    curr_deliv = deliv_list.get_curr_deliv()
     emit('curr_deliv', curr_deliv, broadcast=True)
-    logger.info(f'Sent current delivery to the admin and worker UI(for unloader): {curr_deliv}')
+    logger.info(f'Sent current delivery to the UI: {curr_deliv}')
 
 @socketio.on('load_complete')
 def start_round():
     global deliv_list, robot, loading_dock
-    deliv_sum_list = deliv_list.get_deliv_list(drop_status=True, add_sum=True)
-    to_load = deliv_sum_list['sum']
+    now_delivering = deliv_list.to_dict()
+    to_load = now_delivering['sum']
     robot.inventory.fill(to_load)
     loading_dock.inventory.unfill(to_load)
     logger.info('Updated robot inventory and loading dock inventory')
 
     robot_inv = robot.inventory.to_dict()
     emit('robot_inv', robot_inv, broadcast=True)
-    logger.info(f'Sent robot inventory to the admin UI: {robot_inv}')
-
     loading_dock_inv = loading_dock.inventory.to_dict()
     emit('loading_dock_inv', loading_dock_inv, broadcast=True)
-    logger.info(f'Sent loading dock inventory to the admin UI: {loading_dock_inv}')
+    logger.info(f'Sent robot inventory to the UI: {robot_inv}')
+    logger.info(f'Sent loading dock inventory to the UI: {loading_dock_inv}')
 
     next_addr = deliv_list.get_next_addr()
     if robot.is_turn(next_addr):
-        robot.set_rotation_flip()
+        robot.set_orientation_flip()
         emit('turn', broadcast=True)
-        logger.info(f'Flipping robot rotation, now {robot.rotation}')
+        logger.info(f'Flipping robot orientation, now {robot.orientation}')
     emit('next_addr', next_addr, broadcast=True)
     logger.info(f'Sent next address to the robot: {next_addr}')
 
-    robot.set_delivering()
-    robot_status = robot.get_status()
+    robot_status = robot.set_delivering()
     emit('status', robot_status, broadcast=True) # to robot
     logger.info('Sent delivering status to the robot')
 
@@ -110,24 +103,17 @@ def start_round():
 @socketio.on('info')
 def handle_robot_status_from_robot(robot_info):
     global robot
-    robot.set_from_robot_info(robot_info)
-    logger.info(f'Recieved robot info from robot, and updated robot status: {robot_info}')
+    robot_info = robot.set_from_robot_info(robot_info)
+    logger.info(f'Recieved robot info from robot: {robot_info}')
 
-    robot_status = robot.get_status()
-    emit('robot_status', robot_status, broadcast=True)
-    logger.info(f'Sent robot status(set by robot itself) to the admin UI: {robot_status}')
-
-    if robot.status == RobotStatus.ARRIVIED: pass
-
-        # wait for worker to unload and send delivery_status
-    elif robot.status == RobotStatus.OBSTACLE: pass
-        # wait for admin's signal
+    emit('robot_status', robot_info[STATUS], broadcast=True)
+    logger.info(f'Sent robot info to the UI: {robot_info}')
 
 @socketio.on('delivery_status')
 def handle_delivery_status_from_worker(delivery_status):
     global deliv_list, robot
     if delivery_status == Arrived.CORRECT:
-        to_unload = deliv_list.get_curr_deliv(to_dict=True, drop_status=True)
+        to_unload = deliv_list.get_curr_deliv()
         logger.info(f'Arrived at destination, unloading: {to_unload}')
         robot.inventory.unfill(to_unload)
         logger.info(f'Updated robot inventory upon delivery complete')
@@ -136,31 +122,28 @@ def handle_delivery_status_from_worker(delivery_status):
         emit('robot_inv', robot_inv, broadcast=True)
         logger.info(f'Sent robot inventory to the admin UI: {robot_inv}')
 
-        deliv_list.set_curr_deliv_complete()
+        next_deliv = deliv_list.set_curr_deliv_complete()
         logger.info('Updated current delivery as complete')
+        emit('curr_deliv', next_deliv, broadcast=True)
+        logger.info(f'Sent current delivery to the admin and  worker UI(for unloader): {next_deliv}')
 
-        curr_deliv = deliv_list.get_curr_deliv(to_dict=True, drop_status=True)
-        emit('curr_deliv', curr_deliv, broadcast=True)
-        logger.info(f'Sent current delivery to the admin and  worker UI(for unloader): {curr_deliv}')
+        updated_now_delivering = deliv_list.to_dict()
+        emit('now_delivering', updated_now_delivering, broadcast=True)
+        logger.info(f'Sent updated list to admin UI: {updated_now_delivering}')
 
-        updated_list = deliv_list.get_deliv_list(drop_status=False, add_sum=False)
-        emit('now_delivering', updated_list, broadcast=True)
-        logger.info(f'Sent updated deliv status to admin UI: {updated_list}')
-
-        complete_msg = DeliveryStatus.COMPLETE
-        emit('unload_complete', complete_msg, broadcast=True)
+        # TODO: does scheduler write this into DB?
+        emit('unload_complete', DeliveryStatus.COMPLETE, broadcast=True)
         logger.info('Send delivery complete message to the scheduler')
 
         next_addr = deliv_list.get_next_addr()
         if robot.is_turn(next_addr):
-            robot.set_rotation_flip()
+            robot.set_orientation_flip()
             emit('turn', broadcast=True)
-            logger.info(f'Flipping robot rotation, now: {robot.rotation}')
+            logger.info(f'Flipping robot orientation, now: {robot.orientation}')
         emit('next_addr', next_addr, broadcast=True)
         logger.info(f'Sent next addr to robot: {next_addr}')
 
-        robot.set_delivering()
-        robot_status = robot.status
+        robot_status = robot.set_delivering()
         emit('status', robot_status, broadcast=True) # to robot
         emit('robot_status', robot_status, broadcast=True) # admin UI
         logger.info(f'Sent delivering mode to robot: {robot_status}')
@@ -168,9 +151,8 @@ def handle_delivery_status_from_worker(delivery_status):
 
     elif delivery_status == Arrived.INCORRECT:
         robot.set_clockwise()
-        logger.info('Robot rotation set to clockwise')
-        robot.set_maintenance()
-        robot_status = robot.get_status()
+        logger.info('Robot orientation set to clockwise')
+        robot_status = robot.set_maintenance()
         emit('robot_status', robot_status, broadcast=True) # admin UI
         emit('status', Arrived.INCORRECT, broadcast=True) # to robot
         logger.info(f'Put robot in maintenance mode due to incorrect delivery: {robot_status}')
@@ -179,40 +161,37 @@ def handle_delivery_status_from_worker(delivery_status):
 def handle_robot_status(robot_status):
     global robot
     if robot_status == RobotStatus.MAINTENANCE:
-        robot.set_maintenance()
+        robot_status = robot.set_maintenance()
         logger.info('Put robot in maintenance mode manually')
 
     elif robot_status == RobotStatus.DELIVERING:
-        robot.set_delivering()
+        robot_status = robot.set_delivering()
         logger.info('Put robot in delivering mode manually')
 
     emit('status', robot_status, broadcast=True) # to robot
-    emit('robot_status', robot_status, broadcast=True) # back to admin UI
+    emit('robot_status',robot_status, broadcast=True) # back to admin UI
 
 @socketio.on('replenish')
 def update_loading_dock():
     global robot
     robot_inv = robot.inventory
-    updated_inv = {RED: NUM_ITEM - robot_inv.red,
-                   GREEN: NUM_ITEM - robot_inv.green,
-                   BLUE: NUM_ITEM - robot_inv.blue}
+    updated_inv = {RED: NUM_ITEM.RED - robot_inv.red,
+                   GREEN: NUM_ITEM.GREEN - robot_inv.green,
+                   BLUE: NUM_ITEM.BLUE - robot_inv.blue}
     emit('loading_dock_inv', updated_inv, broadcast=True)
     logger.info(f'Replenished inventory to {updated_inv}, sent to admin UI')
 
 @socketio.on('deliv_prog')
 def update_deliv_prog(deliv_prog):
     global order_db
-    order_db.update_from_dict(deliv_prog)
-    db_status = order_db.to_dict()
+    db_status = order_db.set_from_dict(deliv_prog)
     emit('deliv_prog', db_status, broadcast=True)
     logger.info('Update delivery progress on UI')
-
 
 @socketio.on('video')
 def stram_video(frame):
     global video
     video.set_frame(frame)
-
 
 def generate():
     while True:
