@@ -3,6 +3,9 @@ import cv2
 
 from server_utils import only_when_not_empty
 
+LATEST_ADDR = 'latest_addr'
+NEXT_ADDR = 'next_addr'
+ORIENTATION = 'orientation'
 ADDR = 'addr'
 RED = 'red'
 GREEN = 'green'
@@ -76,49 +79,38 @@ class DeliveryList: # For a round
         self.deliv_sum = {}
         self.curr_idx = 0
 
-    def set_from_dict_list(self, dict_list, orientation):
-        stop_dropped = dict_list[:-1]
+    def reverse_order(self):
+        stop = self.deliv_list.pop(-1)
+        self.deliv_list.reverse()
+        self.deliv_list.append(stop)
+
+    def update_from_scheduler(self, dict_list, orientation):
+        self.deliv_list = [Delivery.from_dict(dic) for dic in dict_list]
         if orientation == Orientation.COUNTERCLOCK:
-            stop_dropped.reverse()
-        self.deliv_list = [Delivery.from_dict(dic) for dic in stop_dropped]
+            self.reverse_order()
+        self.deliv_sum = sum(self.deliv_list).to_dict()
         self.curr_idx = 0
-        merged_deliv = sum(self.deliv_list)
-        self.deliv_sum = merged_deliv.to_dict()
         return self.to_dict()
 
     def set_curr_deliv_complete(self):
         curr_deliv = self.get_curr_deliv(to_dict=False)
         curr_deliv.set_complete()
         self.curr_idx += 1
-        return self.get_curr_deliv()
+        return self.to_dict(), self.get_curr_deliv(to_dict=False)
 
-    @only_when_not_empty
+    # FIXME: delete to_dict
     def get_curr_deliv(self, to_dict=True):
         curr_deliv = self.deliv_list[self.curr_idx]
         if to_dict:
             curr_deliv = curr_deliv.to_dict()
         return curr_deliv
 
-    @only_when_not_empty
     def get_next_addr(self):
         return self.get_curr_deliv(to_dict=False).addr
 
-    @only_when_not_empty
     def to_dict(self):
-        deliv_list = [d.to_dict() for d in self.deliv_list]
+        deliv_list = [d.to_dict() for d in self.deliv_list[self.curr_idx:]]
         return {'deliv_list': deliv_list, 'sum': self.deliv_sum}
-
-class DeliveryProgress:
-    def set_from_dict(self, dic):
-        self.num_pending = dic['num_pending']
-        self.num_complete = dic['num_complete']
-
-    def get_status(self):
-        event_name = 'deliv_prog'
-        data =  {'num_pending': self.num_pending,
-                 'num_complete': self.num_complete,
-                 'total_orders': self.num_pending + self.num_complete}
-        return event_name, data
 
 class Inventory:
     def __init__(self, red, blue, green):
@@ -131,12 +123,20 @@ class Inventory:
         self.red += item_dict[RED]
         self.green += item_dict[GREEN]
         self.blue += item_dict[BLUE]
+        return self.to_dict()
 
     @only_when_not_empty
     def unfill(self, item_dict):
         self.red -= item_dict[RED]
         self.green -= item_dict[GREEN]
         self.blue -= item_dict[BLUE]
+        return self.to_dict()
+
+    def set(self, item_dict):
+        self.red = item_dict[RED]
+        self.green = item_dict[GREEN]
+        self.blue = item_dict[BLUE]
+        return self.to_dict()
 
     def to_dict(self):
         return {RED: self.red, GREEN: self.green, BLUE: self.blue}
@@ -144,13 +144,15 @@ class Inventory:
 class Robot:
     def __init__(self):
         self.status = None
-        self.latest_addr = None
+        self.latest_addr = 0
+        self.next_addr = None
         self.orientation = Orientation.CLOCK
         self.inventory = Inventory(0, 0, 0)
 
-    def set_from_robot_info(self, robot_info):
-        self.latest_addr = robot_info[ADDR]
+    def update_from_robot(self, robot_info):
+        self.latest_addr = robot_info[LATEST_ADDR]
         self.status = robot_info[STATUS]
+        self.orientation = robot_info[ORIENTATION]
         return self.to_dict()
 
     def set_delivering(self):
@@ -161,31 +163,43 @@ class Robot:
         self.status = RobotStatus.MAINTENANCE
         return self.status
 
-    def set_orientation_flip(self):
+    def flip_orientation(self):
         self.orientation = Orientation.CLOCK if self.orientation == Orientation.COUNTERCLOCK else Orientation.COUNTERCLOCK
+        return self.orientation
 
-    def set_clockwise(self):
+    def upon_misdelivery(self):
         self.orientation = Orientation.CLOCK
+        self.set_maintenance()
+        self.latest_addr = 0
+        return self.to_dict()
 
-    def get_status(self):
-        return self.status
+    def upon_delivery_complete(self, next_addr):
+        self.next_addr = next_addr
+        self.set_delivering()
+        return self.to_dict()
+
+    def upon_load_complete(self, next_addr):
+        self.set_delivering()
+        self.next_addr = next_addr
+        return self.to_dict()
 
     def is_turn(self, next_addr):
         if self.orientation == Orientation.CLOCK:
-            if self.latest_addr in {101, 102} and next_addr is None:
+            if self.latest_addr in {101, 102} and next_addr == 0:
                 return True
-            elif self.latest_addr == None and next_addr in {201, 202}:
+            elif self.latest_addr == 0 and next_addr in {201, 202}:
                 return True
         if self.orientation == Orientation.COUNTERCLOCK:
-            if self.latest_addr in {201, 202} and next_addr is None:
+            if self.latest_addr in {201, 202} and next_addr == 0:
                 return True
-            elif self.latest_addr == None and next_addr in {101, 102}:
+            elif self.latest_addr == 0 and next_addr in {101, 102}:
                 return True
         return False
 
     def to_dict(self):
-        return {STATUS: self.status, ADDR:self.latest_addr,
-                'orientation':self.orientation}
+        return {STATUS: self.status, LATEST_ADDR:self.latest_addr,
+                NEXT_ADDR: self.next_addr,
+                ORIENTATION:self.orientation}
 
 class LoadingDock:
     def __init__(self):

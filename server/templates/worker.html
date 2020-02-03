@@ -47,9 +47,9 @@
                 socket.emit("request");
             });
 
-            socket.on("curr_deliv", function(curr_deliv){
+            socket.on("now_delivering", function(curr_deliv){
                 console.log("RECEVIED DATAS SUCCESFULLY")
-                if(curr_deliv == null){
+                if(curr_deliv['deliv_list'].length <= 1){
                     console.log("curr_deliv empty")
 					$('#curr_deliv_add').text(" ");
                     $('#curr_deliv_r').text(" ");
@@ -57,12 +57,11 @@
                     $('#curr_deliv_b').text(" ");
                 }
                 else{
-                    $('#curr_deliv_add').text(curr_deliv['addr']);
-                    $('#curr_deliv_r').text(curr_deliv['red']);
-                    $('#curr_deliv_g').text(curr_deliv['green']);
-                    $('#curr_deliv_b').text(curr_deliv['blue']);
+                    $('#curr_deliv_add').text(curr_deliv['deliv_list'][0]['addr']);
+                    $('#curr_deliv_r').text(curr_deliv['deliv_list'][0]['red']);
+                    $('#curr_deliv_g').text(curr_deliv['deliv_list'][0]['green']);
+                    $('#curr_deliv_b').text(curr_deliv['deliv_list'][0]['blue']);
                 }
-                // socket.emit("request6");
             })
 
             socket.on("now_delivering", function(deliv_list_sum){
@@ -77,7 +76,7 @@
                 }
                 else{
                     console.log(deliv_list_sum)
-                    var deliv_list = deliv_list_sum["deliv_list"];
+                    var deliv_list = deliv_list_sum["deliv_list"].slice(0, -1);
                     var rgb_sum = deliv_list_sum["sum"];
                     var table_len = deliv_list.length;
                     var table = $('#delivery_list');
@@ -95,13 +94,13 @@
                 }
             })
 
-            socket.on('robot_status', function(robot_status){
-                if(robot_status == null){
+            socket.on('robot_info', function(robot_info){
+                if(robot_info == null){
                     console.log("robot robot_status null")
                 }
                 else{
-                    console.log(robot_status);
-                    if (robot_status == "arrived"){
+                    console.log(robot_info);
+                    if (robot_info['status'] == "arrived"){
                         $('#arrive_alarm').addClass("blink-text");
                     }
                     else{
