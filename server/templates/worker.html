@@ -65,7 +65,7 @@
                 // socket.emit("request6");
             })
 
-            socket.on("deliv_list_sum", function(deliv_list_sum){
+            socket.on("loader", function(deliv_list_sum){
                 if(deliv_list_sum == null){
                     console.log("deliv_list_sum empty")
                     var table = $('#delivery_list');
@@ -80,7 +80,6 @@
                     var rgb_sum = deliv_list_sum["sum"];
                     var table_len = deliv_list.length;
                     var table = $('#delivery_list');
-                    // console.log(deliv_status_list[0]['id']);
                     table.find("tbody tr").remove();
 
                     for (var i=0; i<table_len; i++){

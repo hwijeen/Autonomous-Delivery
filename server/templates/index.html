@@ -70,22 +70,20 @@
 				}
 			})
 
-			socket.on("deliv_status_list", function(deliv_status_list){
-				var table_len = deliv_status_list.length;
+			socket.on("now_delivering", function(deliv_status){
+				var table_len = deliv_status['deliv_list'].length;
 				var table = $('#delivery_list');
-				// console.log(deliv_status_list[0]['id']);
 				table.find("tbody tr").remove();
 
 				for (var i=0; i<table_len; i++){
-					table.append("<tr><td>" + deliv_status_list[i]['addr'] + '</td><td>' + 
-					 deliv_status_list[i]['red'] + "</td><td>" + deliv_status_list[i]['green'] + "</td><td>" + deliv_status_list[i]['blue'] +
-					 "</td><td>" + deliv_status_list[i]['status'] + '</td></tr>')
+					table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' + 
+					 deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] +
+					 "</td><td>" + deliv_status['deliv_list'][i]['status'] + '</td></tr>')
 				}
 				console.log(table_len);
-				// socket.emit("request3");
 			})
 
-			socket.on('inv', function(inv){
+			socket.on('loading_dock_inv', function(inv){
 				if(inv == null){
 					console.log("inv empty")
 				}
@@ -288,30 +286,6 @@
                                         	</thead>
 
                                         	<tbody>
-<!--                                             <tr>
-                                                <td><span id="deliv_list_id"></span></td>
-                                                <td><span id="deliv_list_addr"></span></td>
-                                                <td><span id="deliv_list_r"></span></td>
-                                                <td><span id="deliv_list_g"></span></td>
-                                                <td><span id="deliv_list_b"></span></td>
-                                                <td><span id="deliv_list_status"></span></td>				
-                                            </tr> -->
-                                            <!-- <tr>
-                                                <td>2</td>
-                                                <td>102</td>
-                                                <td>0</td>
-                                                <td>1</td>
-                                                <td>5</td>
-                                                <td>done</td>
-                                            </tr>
-                                            <tr>
-                                                <td>3</td>
-                                                <td>103</td>
-                                                <td>2</td>
-                                                <td>0</td>
-                                                <td>2</td>
-                                                <td>ing</td>
-                                            </tr> -->
                                         	</tbody>
                                     	</table>
 
