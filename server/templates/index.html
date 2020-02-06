@@ -52,7 +52,7 @@
                     $('#curr_deliv_r').text(" ");
                     $('#curr_deliv_g').text(" ");
                     $('#curr_deliv_b').text(" ");
-                    socket.emit("request1");
+                    // socket.emit("request1");
                 }
                 else{
                     console.log("curr_deliv okay")
@@ -61,7 +61,7 @@
                     $('#curr_deliv_r').text(curr_deliv['deliv_list'][0]['red']);
                     $('#curr_deliv_g').text(curr_deliv['deliv_list'][0]['green']);
                     $('#curr_deliv_b').text(curr_deliv['deliv_list'][0]['blue']);
-                    socket.emit("request1");
+                    // socket.emit("request1");
                 }
             })
 
@@ -86,7 +86,7 @@
                     $('#prog_bar_per_orders').css("width", percent );
                     $('#perc_complt').text(percent + " Complete(success)");
 
-                    socket.emit("request2");
+                    // socket.emit("request2");
                 }
             })
 
@@ -115,7 +115,7 @@
                     $('#inv_b').text(inv["blue"]);
                     //$('#inv_sum').text(inv["sum"]);
                     console.log("inventory: " + inv);
-                    socket.emit("request4");
+                    // socket.emit("request4");
                 }
             });
 
@@ -129,7 +129,7 @@
                     $('#rbinv_b').text(robot_inv["blue"]);
                     //$('#rbinv_sum').text(robot_inv["sum"]);
                     console.log("robot inventory: " + robot_inv);
-                    socket.emit("request5");
+                    // socket.emit("request5");
                 }
             })
 
@@ -167,7 +167,7 @@
                         $('#status_arrived').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
                     }
                 }
-                socket.emit("request6");
+                // socket.emit("request6");
             })
 
         </script>
