@@ -73,7 +73,13 @@
                     var complete_order = parseFloat(deliv_prog['complete_order']);
                     var total_order = parseFloat(deliv_prog['total_order']);
                     var percent_order = complete_order / total_order * 100;
-                    percent_order = percent_order.toFixed(2);
+
+                    if (complete_order == 0 && total_order == 0){
+                        percent_order = "0";
+                    }
+                    else{
+                        percent_order = percent_order.toFixed(2);
+                    }
                     percent_order = percent_order + "%";
                     // console.log('----------------------------')
                     // console.log(num_complt)
@@ -89,7 +95,13 @@
                     var complete_item = parseFloat(deliv_prog['complete_item']);
                     var total_item = parseFloat(deliv_prog['total_item']);
                     var percent_item = complete_item / total_item * 100;
-                    percent_item = percent_item.toFixed(2);
+
+                    if (complete_item == 0 && total_item == 0){
+                        percent_item = "0";
+                    }
+                    else{
+                        percent_item = percent_item.toFixed(2);
+                    }
                     percent_item = percent_item + "%";
 
                     $('#num_pending_item').text(deliv_prog['pending_item']);
