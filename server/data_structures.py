@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-from torch.utils.tensorboard import SummaryWriter
+from server_utils import only_when_not_empty
 
 DELIV_LIST = 'deliv_list'
 SUM = 'sum'
@@ -38,9 +38,9 @@ class Arrived:
     INCORRECT = 'misdelivery'
 
 class DBStats:
-    NUM_PENDING = 'num_pending'
-    NUM_COMPLETE = 'num_complete'
-    NUM_TOTAL = 'total_orders'
+    NUM_PENDING = 'pending'
+    NUM_COMPLETE = 'complete'
+    NUM_TOTAL = 'total'
 
 
 class Delivery:
@@ -88,6 +88,7 @@ class DeliveryList: # For a round
         self.curr_idx = 0
         return self.to_dict()
 
+    @only_when_not_empty
     def get_curr_deliv(self):
         curr_deliv = self.deliv_list[self.curr_idx]
         return curr_deliv
@@ -99,7 +100,8 @@ class DeliveryList: # For a round
         return self.to_dict(), self.get_curr_deliv()
 
     def to_dict(self):
-        deliv_list = [d.to_dict() for d in self.deliv_list[self.curr_idx:]]
+        #deliv_list = [d.to_dict() for d in self.deliv_list[self.curr_idx:]]
+        deliv_list = [d.to_dict() for d in self.deliv_list[:-1]] # drop stop
         return {DELIV_LIST: deliv_list, SUM: self.deliv_sum}
 
 class Inventory:
@@ -192,31 +194,32 @@ class LoadingDock:
     def __init__(self):
         self.inventory = Inventory(NUM_ITEM.RED, NUM_ITEM.GREEN, NUM_ITEM.BLUE)
 
-class OrderDB:
-    def __init__(self):
+class DataBase:
+    def __init__(self, name, writer):
+        self.name = name
+        self.writer = writer
         self.num_pending = 0
         self.num_complete = 0
         self.num_total = 0
         self.step = 1
-        self.writer = SummaryWriter()
+
+    def write_to_tensorboard(self, db_stats):
+        num_backlog = db_stats[DBStats.NUM_PENDING + f'_{self.name}']
+        num_total = db_stats[DBStats.NUM_TOTAL + f'_{self.name}']
+        self.writer.add_scalar(f'Backlogs_over_time{self.name}', num_backlog, self.step)
+        self.writer.add_scalar(f'Total_{self.name}s_over_time{self.name}', num_total, self.step)
+        self.step += 1
 
     def set_from_dict(self, dic):
-        self.num_pending = dic[DBStats.NUM_PENDING]
-        self.num_complete = dic[DBStats.NUM_COMPLETE]
+        self.num_pending = dic[DBStats.NUM_PENDING + f'_{self.name}']
+        self.num_complete = dic[DBStats.NUM_COMPLETE + f'_{self.name}']
         self.num_total = self.num_pending + self.num_complete
         return self.to_dict()
 
-    def write_to_tensorboard(self, num_backlog, num_total):
-        self.writer.add_scalar('Backlogs_over_time', num_backlog, self.step)
-        self.writer.add_scalar('Total_orders_over_time', num_total, self.step)
-        self.step += 1
-
     def to_dict(self):
-        return {DBStats.NUM_PENDING: self.num_pending,
-                DBStats.NUM_COMPLETE: self.num_complete,
-                DBStats.NUM_TOTAL: self.num_total}
-
-#TODO: ItemDB
+        return {DBStats.NUM_PENDING + f'_{self.name}': self.num_pending,
+                DBStats.NUM_COMPLETE + f'_{self.name}': self.num_complete,
+                DBStats.NUM_TOTAL + f'_{self.name}': self.num_total}
 
 class Video:
     def __init__(self):

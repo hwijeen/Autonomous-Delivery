@@ -2,6 +2,8 @@ import logging
 
 from flask import Flask, render_template, request, Response
 from flask_socketio import SocketIO, emit
+from torch.utils.tensorboard import SummaryWriter
+
 
 from data_structures import *
 from server_utils import turn_off_default_loggers, set_logger_format
@@ -28,6 +30,9 @@ def refresh():
         global deliv_list, robot, order_db
         now_delivering = deliv_list.to_dict()
         emit('now_delivering', now_delivering, broadcast=True)
+
+        curr_deliv = deliv_list.get_curr_deliv()
+        emit('curr_deliv', curr_deliv, broadcast=True)
 
         robot_inv = robot.inventory.to_dict()
         emit('robot_inv', robot_inv, broadcast=True)
@@ -59,6 +64,10 @@ def prepare_round(deliv_dict_list):
     now_delivering = deliv_list.update_from_scheduler(deliv_dict_list, orientation)
     emit('now_delivering', now_delivering, broadcast=True)
     logger.info(f'Setting delivery list: {now_delivering}')
+
+    curr_deliv = deliv_list.get_curr_deliv()
+    emit('curr_deliv', curr_deliv, broadcast=True)
+    logger.info(f'Sent current delivery to UI: {curr_deliv}')
 
 @socketio.on('load_complete')
 def start_round():
@@ -131,29 +140,13 @@ def update_loading_dock():
 
 @socketio.on('deliv_prog')
 def update_deliv_prog(deliv_prog):
-    global order_db
+    global order_db, item_db
     db_stats = order_db.set_from_dict(deliv_prog)
     emit('deliv_prog', db_stats, broadcast=True)
     logger.info('Update delivery progress on UI')
 
-    num_backlog = db_stats[DBStats.NUM_PENDING]
-    num_total = db_stats[DBStats.NUM_TOTAL]
-    order_db.write_to_tensorboard(num_backlog, num_total)
-
-@socketio.on('video')
-def stram_video(frame):
-    global video
-    video.set_frame(frame)
-
-def generate():
-    while True:
-        global video
-        frame = video.get_frame()
-        yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-@app.route('/video_feed')
-def video_feed():
-    return Response(generate(), mimetype = "multipart/x-mixed-replace; boundary=frame")
+    order_db.write_to_tensorboard(db_stats)
+    item_db.write_to_tensorboard(db_stats)
 
 
 if __name__ == "__main__":
@@ -161,7 +154,8 @@ if __name__ == "__main__":
     deliv_list = DeliveryList()
     robot = Robot()
     loading_dock = LoadingDock()
-    order_db = OrderDB()
-    video = Video()
+    writer = SummaryWriter()
+    order_db = DataBase(name='order', writer=writer)
+    item_db = DataBase(name='item', writer=writer)
 
     socketio.run(app, host='0.0.0.0', port=60000)
