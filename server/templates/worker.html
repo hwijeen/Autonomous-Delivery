@@ -30,6 +30,8 @@
 
             function robot_go(){
                 socket.emit('delivery_status', "complete");
+                $('#curr_deliv_add').text(" ");
+
             }
             function misdliv(){
                 socket.emit('delivery_status', "misdelivery");
@@ -37,9 +39,9 @@
             function load_complete(){
                 socket.emit('load_complete');
 
-				// var table = $('#delivery_list');
-				// table.find("tbody tr").remove();
-				// table.find("tfoot").remove();
+                var table = $('#delivery_list');
+                table.find("tbody tr").remove();
+                table.find("tfoot").remove();
             }
 
             socket.on('connect', function(){
@@ -47,61 +49,48 @@
                 socket.emit("request");
             });
 
-            socket.on("curr_deliv", function(curr_deliv){
-                console.log("RECEVIED DATAS SUCCESFULLY")
-                if(curr_deliv == null){
-                    console.log("curr_deliv empty")
-					$('#curr_deliv_add').text(" ");
-                    $('#curr_deliv_r').text(" ");
-                    $('#curr_deliv_g').text(" ");
-                    $('#curr_deliv_b').text(" ");
-                }
-                else{
-                    $('#curr_deliv_add').text(curr_deliv['addr']);
-                    $('#curr_deliv_r').text(curr_deliv['red']);
-                    $('#curr_deliv_g').text(curr_deliv['green']);
-                    $('#curr_deliv_b').text(curr_deliv['blue']);
-                }
-                // socket.emit("request6");
-            })
 
-            socket.on("deliv_list_sum", function(deliv_list_sum){
-                if(deliv_list_sum == null){
-                    console.log("deliv_list_sum empty")
-                    var table = $('#delivery_list');
-                    table.find("tbody tr").remove();
-                    $('#sum_r').text(" ");
-                    $('#sum_g').text(" ");
-                    $('#sum_b').text(" ");
-                    
-                }
-                else{
-                    var deliv_list = deliv_list_sum["deliv_list"];
-                    var rgb_sum = deliv_list_sum["sum"];
-                    var table_len = deliv_list.length;
-                    var table = $('#delivery_list');
-                    // console.log(deliv_status_list[0]['id']);
-                    table.find("tbody tr").remove();
+            socket.on("now_delivering", function(deliv_status){
+                var table_len = deliv_status['deliv_list'].length;
+                var table = $('#delivery_list');
+                table.find("tbody tr").remove();
 
-                    for (var i=0; i<table_len; i++){
-                        table.append("<tr><td>" + deliv_list[i]['addr'] + '</td><td>' + 
-                         deliv_list[i]['red'] + "</td><td>" + deliv_list[i]['green'] + "</td><td>" + deliv_list[i]['blue'] + '</td></tr>')
-                    }
-                    console.log(table_len);
-                    $('#sum_r').text(rgb_sum['red']);
-                    $('#sum_g').text(rgb_sum['green']);
-                    $('#sum_b').text(rgb_sum['blue']);
+                console.log("Table lent " + table_len)
+                console.log("deliv_Status list: " + deliv_status['deliv_list'])
+
+                for (var i=0; i<table_len; i++){
+                    table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' + 
+                     deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] + '</td></tr>')
+                }
+
+                $('#sum_r').text(deliv_status['sum']['red']);
+                $('#sum_g').text(deliv_status['sum']['green']);
+                $('#sum_b').text(deliv_status['sum']['blue']);
                     // socket.emit("request5");
+                // socket.emit("request3");
+                var table_len = deliv_status['deliv_list'].length;
+                var table = $('#delivery_list_unloader');
+                table.find("tbody tr").remove();
+
+                console.log("Table lent " + table_len)
+                console.log("deliv_Status list: " + deliv_status['deliv_list'])
+
+                for (var i=0; i<table_len; i++){
+                    table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' + 
+                     deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] + '</td></tr>')
                 }
+
+                socket.emit("request_curr")
             })
 
-            socket.on('robot_status', function(robot_status){
-                if(robot_status == null){
+
+            socket.on('robot_info', function(robot_info){
+                if(robot_info == null){
                     console.log("robot robot_status null")
                 }
                 else{
-                    console.log(robot_status);
-                    if (robot_status == "arrived"){
+                    console.log(robot_info);
+                    if (robot_info['status'] == "arrived"){
                         $('#arrive_alarm').addClass("blink-text");
                     }
                     else{
@@ -110,6 +99,43 @@
                 }
             })
 
+
+            socket.on("curr_deliv", function(curr_deliv){
+                if(curr_deliv == null){
+                    console.log("curr_deliv empty")
+                    // socket.emit("request1");
+                }
+                else{
+                    console.log("curr_deliv okay")
+                    // console.log("curr_deliv: " + curr_deliv)
+                    var curr_addr = curr_deliv['addr'];
+                    curr_addr = curr_addr.toString();
+                    console.log(curr_addr);
+
+                    var addr_list = document.getElementById("delivery_list_unloader").getElementsByTagName('td');
+                    for (var i=0; i<addr_list.length; i++){
+                        var tds = addr_list.item(i);
+                        tds_text = tds.innerHTML;
+
+                        if (tds_text == curr_addr){
+                            console.log("WOWOWOWOWOWOWOWOWO");
+                            console.log(tds);
+                            $(tds).parent().css({
+                                "background-color": "#FFC1D9"
+                            });
+                            break;
+                        }
+                        else{console.log("오없어~~~");}
+                    }
+
+
+                    // $('#curr_deliv_add').text(curr_deliv['addr']);
+                    // $('#curr_deliv_r').text(curr_deliv['red']);
+                    // $('#curr_deliv_g').text(curr_deliv['green']);
+                    // $('#curr_deliv_b').text(curr_deliv['blue']);
+                    // // socket.emit("request1");
+                }
+            })
             
         </script>
         
@@ -153,13 +179,6 @@
                             <a class="nav-link" href="index"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Admin</a>
                             <a class="nav-link" href="worker"style="background-color: #ADD8E6; color: black;"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Worker</a>
 
-                            <div class="sb-sidenav-menu-heading">Addons</div>
-                            <a class="nav-link" href="charts.html"
-                                ><div class="sb-nav-link-icon"><i class="fas fa-chart-area"></i></div>
-                                Charts</a>
-                                <a class="nav-link" href="tables.html"
-                                ><div class="sb-nav-link-icon"><i class="fas fa-table"></i></div>
-                                Tables</a>
                         </div>
                     </div>
 
@@ -205,12 +224,28 @@
 
                           <div class="column">
                             <h2> Unloader </h2>
-                            
+
                             <br>
                             <div id="arrive_alarm"> Robot Arrived </div>
                             <br>
 
-                            <h5 class='card-title'>Current Delivery</h5>
+                            <table class="table table-bordered" id="delivery_list_unloader" width="100%" cellspacing="0" style="text-align:center;">
+                                            <thead>
+                                            <tr>
+                                                <th id="bgc">address</th>
+                                                <th id="bgc_red">R</th>
+                                                <th id="bgc_green">G</th>
+                                                <th id="bgc_blue">B</th>
+                                            </tr>
+                                            </thead>
+
+                                            <tbody>
+
+                                            </tbody>
+                                        </table>
+                        
+
+                            <!-- <h5 class='card-title'>Current Delivery</h5>
                                        <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
                                         <tbody>
                                             <tr>
@@ -220,17 +255,17 @@
                                                 <td id="bgc_blue"><span id='curr_deliv_b'></span> </td>
                                             </tr>
                                         </tbody>
-                                    </table>
+                                    </table> -->
 
                                     <div class="text-center">
                                     <input type="submit" class="btn btn-info text-center" value="Unload Complete", onclick="robot_go();">
                                     <input type="submit" class="btn btn-danger text-center" value="Misdelivery", onclick="misdliv();">
-                                    <!-- <button type="button" class="btn btn-info text-center">Complete Unload</button></div> -->
-
+                                   <!--  <input type="submit" class="btn btn-warning text-center" value="drop", onclick=None> -->
                             
                         </div>
                     </div>
                 </main>
+
 
 
     </body>
