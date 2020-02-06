@@ -26,27 +26,29 @@ def worker():
 
 @socketio.on('request')
 def refresh():
+    global deliv_list, robot, order_db, item_db
+    now_delivering = deliv_list.to_dict()
+    emit('now_delivering', now_delivering, broadcast=True)
+
     try:
-        global deliv_list, robot, order_db
-        now_delivering = deliv_list.to_dict()
-        emit('now_delivering', now_delivering, broadcast=True)
-
-        curr_deliv = deliv_list.get_curr_deliv()
+        curr_deliv = deliv_list.get_curr_deliv().to_dict()
         emit('curr_deliv', curr_deliv, broadcast=True)
-
-        robot_inv = robot.inventory.to_dict()
-        emit('robot_inv', robot_inv, broadcast=True)
-
-        robot_info = robot.to_dict()
-        emit('robot_info', robot_info, broadcast=True)
-
-        loading_dock_inv = loading_dock.inventory.to_dict()
-        emit('loading_dock_inv', loading_dock_inv, broadcast=True)
-
-        db_status = order_db.set_from_dict(deliv_prog)
-        emit('deliv_prog', db_status, broadcast=True)
     except:
         pass
+
+    robot_inv = robot.inventory.to_dict()
+    emit('robot_inv', robot_inv, broadcast=True)
+
+    robot_info = robot.to_dict()
+    emit('robot_info', robot_info, broadcast=True)
+
+    loading_dock_inv = loading_dock.inventory.to_dict()
+    emit('loading_dock_inv', loading_dock_inv, broadcast=True)
+
+    order_db_stats = order_db.to_dict()
+    item_db_stats = item_db.to_dict()
+    db_stats = {**order_db_stats, **item_db_stats}
+    emit('deliv_prog', db_stats, broadcast=True)
 
 @socketio.on('connect')
 def connect():
@@ -65,7 +67,7 @@ def prepare_round(deliv_dict_list):
     emit('now_delivering', now_delivering, broadcast=True)
     logger.info(f'Setting delivery list: {now_delivering}')
 
-    curr_deliv = deliv_list.get_curr_deliv()
+    curr_deliv = deliv_list.get_curr_deliv().to_dict()
     emit('curr_deliv', curr_deliv, broadcast=True)
     logger.info(f'Sent current delivery to UI: {curr_deliv}')
 
@@ -141,7 +143,9 @@ def update_loading_dock():
 @socketio.on('deliv_prog')
 def update_deliv_prog(deliv_prog):
     global order_db, item_db
-    db_stats = order_db.set_from_dict(deliv_prog)
+    order_db_stats = order_db.set_from_dict(deliv_prog)
+    item_db_stats = item_db.set_from_dict(deliv_prog)
+    db_stats = {**order_db_stats, **item_db_stats}
     emit('deliv_prog', db_stats, broadcast=True)
     logger.info('Update delivery progress on UI')
 

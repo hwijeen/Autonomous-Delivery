@@ -88,7 +88,6 @@ class DeliveryList: # For a round
         self.curr_idx = 0
         return self.to_dict()
 
-    @only_when_not_empty
     def get_curr_deliv(self):
         curr_deliv = self.deliv_list[self.curr_idx]
         return curr_deliv

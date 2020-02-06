@@ -11,6 +11,7 @@
         <!-- local에서 실험할 때만 쓰는 css -->
         <!-- <link href="css/styles.css" rel="stylesheet" /> -->
         <!-- <meta http-equiv="refresh" content="2"> -->
+
         <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
         <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
         <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
@@ -19,139 +20,172 @@
         <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
 
         <script>
-        	var socket = io.connect();
+            var socket = io.connect();
 
-        	// send data to Python from html
-			function robot_go(){
-		    	socket.emit('status_change', "delivering");
-			}
+            // send data to Python from html
+            function robot_go(){
+                socket.emit('status_change', "delivering");
+            }
 
-			function maint(){
-		    	socket.emit('status_change', "maintenance");
-			}
+            function maint(){
+                socket.emit('status_change', "maintenance");
+            }
 
             function replenish(){
                 socket.emit("replenish");
             }
 
-			// var socket = io('http://127.0.0.1:5000/index');
+            // var socket = io('http://127.0.0.1:5000/index');
 
-			// receive data to html from python
-			// confirm connection (start conenction)
-			socket.on('connect', function(){
-				console.log("Connected");
-				socket.emit("request");
-			});
+            // receive data to html from python
+            // confirm connection (start conenction)
+            socket.on('connect', function(){
+                console.log("Connected");
+                socket.emit("request");
+            });
 
 
-			socket.on("now_delivering", function(curr_deliv){
-				if(curr_deliv['deliv_list'].length <= 1){
-					console.log("curr_deliv empty")
-					$('#curr_deliv_add').text(" ");
+            socket.on("curr_deliv", function(curr_deliv){
+                if(curr_deliv == null){
+                    console.log("curr_deliv empty")
+                    $('#curr_deliv_add').text(" ");
                     $('#curr_deliv_r').text(" ");
                     $('#curr_deliv_g').text(" ");
                     $('#curr_deliv_b').text(" ");
-				}
-				else{
-                    console.log(curr_deliv)
-					$('#curr_deliv_add').text(curr_deliv['deliv_list'][0]['addr']);
-					$('#curr_deliv_r').text(curr_deliv['deliv_list'][0]['red']);
-					$('#curr_deliv_g').text(curr_deliv['deliv_list'][0]['green']);
-					$('#curr_deliv_b').text(curr_deliv['deliv_list'][0]['blue']);
-				}
-			})
+                    // socket.emit("request1");
+                }
+                else{
+                    console.log("curr_deliv okay")
+                    // console.log("curr_deliv: " + curr_deliv)
+                    $('#curr_deliv_add').text(curr_deliv['addr']);
+                    $('#curr_deliv_r').text(curr_deliv['red']);
+                    $('#curr_deliv_g').text(curr_deliv['green']);
+                    $('#curr_deliv_b').text(curr_deliv['blue']);
+                    // socket.emit("request1");
+                }
+            })
 
-			socket.on("deliv_prog", function(deliv_prog){
-				if(deliv_prog == null){
-					console.log("deliv_prog empty")
-				}
-				else{
-					$('#num_pending').text(deliv_prog['num_pending']);
-					$('#num_compl').text(deliv_prog['num_complete']);
-					$('#total_orders').text(deliv_prog['total_orders']);
-					socket.emit("request2");
-				}
-			})
+            socket.on("deliv_prog", function(deliv_prog){
+                if(deliv_prog == null){
+                    console.log("deliv_prog empty")
+                }
+                else{
+                    var complete_order = parseFloat(deliv_prog['complete_order']);
+                    var total_order = parseFloat(deliv_prog['total_order']);
+                    var percent_order = complete_order / total_order * 100;
+                    percent_order = percent_order.toFixed(2);
+                    percent_order = percent_order + "%";
+                    // console.log('----------------------------')
+                    // console.log(num_complt)
+                    // console.log(total_num)
+                    // console.log(percent)
+                    $('#num_pending_orders').text(deliv_prog['pending_order']);
+                    $('#num_compl_orders').text(deliv_prog['complete_order']);
+                    $('#total_orders_orders').text(deliv_prog['total_order']);
 
-			socket.on("now_delivering", function(deliv_status){
-				var table_len = deliv_status['deliv_list'].length;
-				var table = $('#delivery_list');
-				table.find("tbody tr").remove();
-                console.log(deliv_status['deliv_list'])
+                    $('#prog_bar_per_orders').css("width", percent_order );
+                    $('#perc_complt').text(percent_order + " Complete(success)");
 
-				for (var i=0; i<table_len-1; i++){
-					table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' + 
-					 deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] +
-					 "</td><td>" + deliv_status['deliv_list'][i]['status'] + '</td></tr>')
-				}
-				console.log(table_len);
-			})
+                    var complete_item = parseFloat(deliv_prog['complete_item']);
+                    var total_item = parseFloat(deliv_prog['total_item']);
+                    var percent_item = complete_item / total_item * 100;
+                    percent_item = percent_item.toFixed(2);
+                    percent_item = percent_item + "%";
 
-			socket.on('loading_dock_inv', function(inv){
-				if(inv == null){
-					console.log("inv empty")
-				}
-				else{
-					$('#inv_r').text(inv["red"]);
-					$('#inv_g').text(inv["green"]);
-					$('#inv_b').text(inv["blue"]);
-					//$('#inv_sum').text(inv["sum"]);
-					console.log(inv);
-					// socket.emit("request4");
-				}
-			});
+                    $('#num_pending_item').text(deliv_prog['pending_item']);
+                    $('#num_compl_item').text(deliv_prog['complete_item']);
+                    $('#total_orders_item').text(deliv_prog['total_item']);
 
-			socket.on('robot_inv', function(robot_inv){
-				if(robot_inv == null){
-					console.log("robot inv empty")					
-				}
-				else{
-					$('#rbinv_r').text(robot_inv["red"]);
-					$('#rbinv_g').text(robot_inv["green"]);
-					$('#rbinv_b').text(robot_inv["blue"]);
-					//$('#rbinv_sum').text(robot_inv["sum"]);
-					console.log(robot_inv);
-					// socket.emit("request5");
-				}
-			})
+                    $('#prog_bar_per_items').css("width", percent_item );
+                    $('#perc_item').text(percent_item + " Complete(success)");
 
-			socket.on('robot_info', function(robot_info){
-				if(robot_info == null){
-					console.log("robot robot_info null")
-				}
-				if(robot_info['status'] == null){
-					console.log("robot robot_info null")
-				}
-				else{
-                    console.log(robot_info);
-					if (robot_info['status'] == "delivering"){
-						$('#status_delivering').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
-						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-					}
-					else if (robot_info['status'] == "maintenance"){
-						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_maint').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
-						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-					}
-					else if (robot_info['status'] == "obstacle"){
-						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_obstacle').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
-						$('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-					}
-					else{
-						$('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
-						$('#status_arrived').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
-					}
-				}
-			})
+                    // socket.emit("request2");
+                }
+            })
 
-		</script>
+            socket.on("now_delivering", function(deliv_status){
+                var table_len = deliv_status['deliv_list'].length;
+                var table = $('#delivery_list');
+                table.find("tbody tr").remove();
+
+                console.log("Table lent " + table_len)
+                console.log("deliv_Status list: " + deliv_status['deliv_list'])
+
+                for (var i=0; i<table_len; i++){
+                    table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' +
+                     deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] +
+                     "</td><td>" + deliv_status['deliv_list'][i]['status'] + '</td></tr>')
+                }
+                console.log("table length: " + table_len);
+                // socket.emit("request3");
+            })
+
+            socket.on('loading_dock_inv', function(inv){
+                if(inv == null){
+                    console.log("inv empty")
+                }
+                else{
+                    $('#inv_r').text(inv["red"]);
+                    $('#inv_g').text(inv["green"]);
+                    $('#inv_b').text(inv["blue"]);
+                    //$('#inv_sum').text(inv["sum"]);
+                    console.log("inventory: " + inv);
+                    // socket.emit("request4");
+                }
+            });
+
+            socket.on('robot_inv', function(robot_inv){
+                if(robot_inv == null){
+                    console.log("robot inv empty")
+                }
+                else{
+                    $('#rbinv_r').text(robot_inv["red"]);
+                    $('#rbinv_g').text(robot_inv["green"]);
+                    $('#rbinv_b').text(robot_inv["blue"]);
+                    //$('#rbinv_sum').text(robot_inv["sum"]);
+                    console.log("robot inventory: " + robot_inv);
+                    // socket.emit("request5");
+                }
+            })
+
+            socket.on('robot_info', function(robot_info){
+                // if(robot_info == null){
+                //     console.log("robot robot_info null")
+                // }
+                if(robot_info['status'] == null){
+                    console.log("robot robot_info null")
+                }
+                else{
+                    console.log("robot info: " + robot_info);
+                    if (robot_info['status'] == "delivering"){
+                        $('#status_delivering').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+                        $('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                    }
+                    else if (robot_info['status'] == "maintenance"){
+                        $('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_maint').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+                        $('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                    }
+                    else if (robot_info['status'] == "obstacle"){
+                        $('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_obstacle').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+                        $('#status_arrived').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                    }
+                    else{
+                        $('#status_delivering').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_maint').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_obstacle').css({"font-weight":"normal", "background-color":"white", "color":"black"});
+                        $('#status_arrived').css({"font-weight":"bold", "background-color":"blue", "color":"white"});
+                    }
+                }
+                // socket.emit("request6");
+            })
+
+        </script>
 
 
     </head>
@@ -188,6 +222,7 @@
                             <a class="nav-link" href="index" style="background-color: #ADD8E6; color: black;"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Admin</a>
                             <a class="nav-link" href="worker"><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Worker</a>
 
+
                         </div>
                     </div>
 
@@ -201,19 +236,13 @@
                         <br>
 
                         <div class='card-deck', style="margin-bottom:15px; max-width:90rem;">
-                            <div class="card" style="width: 200rem;">
-                                <div class="card-body">
-                                    <h5 class='card-title'>Robot View</h5>
-                                        <img src="{{ url_for('video_feed') }}" width="320" height="240">
-                                </div>
-                            </div>
                             <div class="card">
                                 <div class="card-body">
                                     <h5 class='card-title'>Robot Status</h5>
-	                                    <ul id="status_delivering">delivering</ul>
-	                                    <ul id="status_maint">Maintenance</ul>
-	                                    <ul id="status_obstacle">Obstacle</ul>
-	                                    <ul id="status_arrived">Arrived</ul>
+                                        <ul id="status_delivering">Delivering</ul>
+                                        <ul id="status_maint">Maintenance</ul>
+                                        <ul id="status_obstacle">Obstacle</ul>
+                                        <ul id="status_arrived">Arrived</ul>
                                     <hr>
                                     <!-- <button type="button" class="btn btn-success btn-lg btn-block">Go</button> -->
                                     <!-- <button type="button" class="btn btn-danger btn-lg btn-block">Maintenance</button> -->
@@ -226,7 +255,7 @@
                             </div>
                             <div class="card">
                                 <div class="card-body", style="padding-bottom:1px;">
-<!--                                 	<h5 class='card-title'></h5> -->
+<!--                                    <h5 class='card-title'></h5> -->
                                     <h5 class='card-title'>Current Delivery</h5>
                                        <table class="table table-bordered" id="dataTable" width="80%" , style="text-align:center;">
                                         <tbody>
@@ -239,15 +268,41 @@
                                         </tbody>
                                     </table>
 
-                                    <hr width="340px;" size="20"> 
-                                    <br>
+                                </div>
+                            </div>
 
-                                    <h5 class='card-title'>Delivering Progress</h5>
+                            <div class="card" style="width: 200rem;">
+                                <div class="card-body">
+                                    <h5 class='card-title'>Delivering Progress per orders</h5>
                                         <ul>
-                                    		<li>Pending orders: <span id='num_pending'></span> </li>
-                                    		<li>Completed orders: <span id='num_compl'></span></li>
-                                    		<li>Total orders: <span id='total_orders'></span></li>
-                                    	</ul>
+                                            <li>Pending orders: <span id='num_pending_orders'></span> </li>
+                                            <li>Completed orders: <span id='num_compl_orders'></span></li>
+                                            <li>Total orders: <span id='total_orders_orders'></span></li>
+                                        </ul>
+
+                                        <div class="progress">
+                                            <div id="prog_bar_per_orders" class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="40"
+                                              aria-valuemin="0" aria-valuemax="100">
+                                                <span id='perc_complt'></span>
+                                            </div>
+                                        </div>
+
+                                    <hr width="340px;" size="20">
+
+
+                                    <h5 class='card-title'>Delivering Progress per items</h5>
+                                        <ul>
+                                            <li>Pending items: <span id='num_pending_item'></span> </li>
+                                            <li>Completed items: <span id='num_compl_item'></span></li>
+                                            <li>Total items: <span id='total_orders_item'></span></li>
+                                        </ul>
+
+                                        <div class="progress">
+                                            <div id="prog_bar_per_items" class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="40"
+                                              aria-valuemin="0" aria-valuemax="100">
+                                              <span id="perc_item"></span>
+                                            </div>
+                                        </div>
 
                                 </div>
                             </div>
@@ -273,9 +328,9 @@
                             <div class='card-deck', style="margin-bottom:15px; max-width:90rem;">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 class='card-title'>Now Delivering (ith turn)</h5>
-		                                <table class="table table-bordered" id="delivery_list" width="100%" cellspacing="0" style="text-align:center;">
-		                                    <thead>
+                                    <h5 class='card-title'>Now Delivering </h5>
+                                        <table class="table table-bordered" id="delivery_list" width="100%" cellspacing="0" style="text-align:center;">
+                                            <thead>
                                             <tr>
                                                 <th id="bgc">address</th>
                                                 <th id="bgc_red">R</th>
@@ -283,35 +338,35 @@
                                                 <th id="bgc_blue">B</th>
                                                 <th id="bgc">status</th>
                                             </tr>
-                                        	</thead>
+                                            </thead>
 
-                                        	<tbody>
-                                        	</tbody>
-                                    	</table>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
 
                                 </div>
                             </div>
                             <div class="card" style="width: 20px;">
                                 <div class="card-body">
-                                	<div class="column", style="height: 300px;" >
-	                                    <h5 class='card-title'>Robot inventory</h5>
+                                    <div class="column", style="height: 300px;" >
+                                        <h5 class='card-title'>Robot inventory</h5>
 
 
-	                                    <p class='card-text' >Red: <span id="rbinv_r"></span></p>
-	                                    <p class='card-text' >Green: <span id="rbinv_g"></span></p>
-	                                    <p class='card-text' >Blue: <span id="rbinv_b"></span></p>
-	                                    <hr width="250px;" size="5"> 
-                            		</div>
+                                        <p class='card-text' >Red: <span id="rbinv_r"></span></p>
+                                        <p class='card-text' >Green: <span id="rbinv_g"></span></p>
+                                        <p class='card-text' >Blue: <span id="rbinv_b"></span></p>
+                                        <hr width="250px;" size="5">
+                                    </div>
                                     
                                      <div class="column", style="height: 300px;" >
-                            			<h5 class='card-title'>Inventory</h5>
-                            			<p class='card-text'>Red: <span id="inv_r"></span> </p>
-	                                    <p class='card-text'>Green: <span id="inv_g"></span> </p>
-	                                    <p class='card-text'>Blue: <span id="inv_b"></span> </p>
-	                                    <hr width="250px;" size="5"> 
-	                                    <input type="button" value="update" class="btn btn-info text-center" style="float:right" onclick="replenish();">
-                            			
-                            		</div>
+                                        <h5 class='card-title'>Inventory</h5>
+                                        <p class='card-text'>Red: <span id="inv_r"></span> </p>
+                                        <p class='card-text'>Green: <span id="inv_g"></span> </p>
+                                        <p class='card-text'>Blue: <span id="inv_b"></span> </p>
+                                        <hr width="250px;" size="5">
+                                        <input type="button" value="update" class="btn btn-info text-center" style="float:right" onclick="replenish();">
+
+                                    </div>
 
                                     
 
