@@ -2,7 +2,6 @@ import logging
 
 from flask import Flask, render_template, request, Response
 from flask_socketio import SocketIO, emit
-from torch.utils.tensorboard import SummaryWriter
 
 from data_structures import *
 from server_utils import turn_off_default_loggers, set_logger_format
@@ -57,21 +56,14 @@ def prepare_round(deliv_dict_list):
     global deliv_list, robot
     logger.info(f'Received delivery list from scheduler: {deliv_dict_list}')
     orientation = robot.orientation
-    deliv_list.update_from_scheduler(deliv_dict_list, orientation)
-    next_addr = deliv_list.get_curr_deliv(to_dict=False).addr
-    if robot.is_turn(next_addr):
-        deliv_list.reverse_order()
-        logger.info('Reversing delivery list because {orientation} and {next_addr}')
-
-    now_delivering = deliv_list.to_dict()
+    now_delivering = deliv_list.update_from_scheduler(deliv_dict_list, orientation)
     emit('now_delivering', now_delivering, broadcast=True)
     logger.info(f'Setting delivery list: {now_delivering}')
 
 @socketio.on('load_complete')
 def start_round():
     global deliv_list, robot, loading_dock
-    now_delivering = deliv_list.to_dict()
-    to_load = now_delivering['sum']
+    to_load = deliv_list.deliv_sum
     robot.inventory.fill(to_load)
     loading_dock.inventory.unfill(to_load)
 
@@ -80,7 +72,7 @@ def start_round():
     emit('robot_inv', robot_inv, broadcast=True)
     emit('loading_dock_inv', loading_dock_inv, broadcast=True)
 
-    next_addr = deliv_list.get_next_addr()
+    next_addr = deliv_list.get_curr_deliv().addr
     if robot.is_turn(next_addr):
         emit('turn', broadcast=True)
         logger.info('Flipping robot')
@@ -89,7 +81,7 @@ def start_round():
     logger.info(f'Sending info to robot {robot_info}')
 
 @socketio.on('robot_info')
-def handle_robot_status_from_robot(robot_info):
+def update_from_robot(robot_info):
     global robot
     robot_info = robot.update_from_robot(robot_info)
     logger.info(f'Recieved robot info from robot: {robot_info}')
@@ -99,7 +91,7 @@ def handle_robot_status_from_robot(robot_info):
 def handle_delivery_status_from_worker(delivery_status):
     global deliv_list, robot
     if delivery_status == Arrived.CORRECT:
-        to_unload = deliv_list.get_curr_deliv()
+        to_unload = deliv_list.get_curr_deliv().to_dict()
         robot_inv = robot.inventory.unfill(to_unload)
         emit('robot_inv', robot_inv, broadcast=True)
 
@@ -107,17 +99,14 @@ def handle_delivery_status_from_worker(delivery_status):
         emit('now_delivering', updated_now_delivering, broadcast=True)
         logger.info(f'Updated now delivering: {updated_now_delivering}')
 
-        # TODO: does scheduler write this into DB?
         emit('unload_complete', DeliveryStatus.COMPLETE, broadcast=True)
 
-        robot_info = robot.upon_delivery_complete(next_deliv.addr)
+        robot.upon_delivery_complete(next_deliv.addr)
         if robot.is_turn(next_deliv.addr):
             emit('turn', broadcast=True)
             logger.info('Flipping robot')
         emit('robot_info', robot.to_dict(), broadcast=True)
-        logger.info(f'Sending info to robot {robot_info}')
-
-        update_loading_dock()
+        logger.info(f'Sending info to robot {robot.to_dict()}')
 
     elif delivery_status == Arrived.INCORRECT:
         robot_info = robot.upon_misdelivery()
@@ -126,22 +115,8 @@ def handle_delivery_status_from_worker(delivery_status):
 @socketio.on('status_change')
 def handle_robot_status(robot_status):
     global robot
-    if robot_status == RobotStatus.MAINTENANCE:
-        robot_status = robot.set_maintenance()
-        logger.info('Put robot in maintenance mode manually')
-
-    elif robot_status == RobotStatus.DELIVERING:
-        robot_status = robot.set_delivering()
-        logger.info('Put robot in delivering mode manually')
-
-    robot_info = robot.to_dict()
+    robot_info = robot.set_status(robot_status)
     emit('robot_info', robot_info, broadcast=True)
-
-@socketio.on('turn')
-def flip_robot(_):
-    global robot
-    robot.flip_orientation()
-    logger.info('Robot has flipped rotation')
 
 @socketio.on('replenish')
 def update_loading_dock():
@@ -163,10 +138,7 @@ def update_deliv_prog(deliv_prog):
 
     num_backlog = db_stats[DBStats.NUM_PENDING]
     num_total = db_stats[DBStats.NUM_TOTAL]
-    global step
-    writer.add_scalar('Backlogs_over_time', num_backlog, step)
-    writer.add_scalar('Total_orders_over_time', num_total, step)
-    step += 1
+    order_db.write_to_tensorboard(num_backlog, num_total)
 
 @socketio.on('video')
 def stram_video(frame):
@@ -192,8 +164,4 @@ if __name__ == "__main__":
     order_db = OrderDB()
     video = Video()
 
-    step = 1
-    writer = SummaryWriter()
-
     socketio.run(app, host='0.0.0.0', port=60000)
-
