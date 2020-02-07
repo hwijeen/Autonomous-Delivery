@@ -67,9 +67,10 @@
 
             socket.on("deliv_prog", function(deliv_prog){
                 if(deliv_prog == null){
-                    console.log("deliv_prog empty")
+                    console.log("deliv_prog empty");
                 }
                 else{
+                    console.log('deliv_prog okay');
                     var complete_order = parseFloat(deliv_prog['complete_order']);
                     var total_order = parseFloat(deliv_prog['total_order']);
                     var percent_order = complete_order / total_order * 100;
@@ -111,7 +112,6 @@
                     $('#prog_bar_per_items').css("width", percent_item );
                     $('#perc_item').text(percent_item + " Complete(success)");
 
-                    $('#highest_pending_item').text(deliv_prog['highest_pending_item']);
                     $('#highest_pending_order').text(deliv_prog['highest_pending_order']);
 
                     // socket.emit("request2");
@@ -125,6 +125,8 @@
 
                 console.log("Table lent " + table_len)
                 console.log("deliv_Status list: " + deliv_status['deliv_list'])
+
+                $('#num_round').text(deliv_status['num_round']);
 
                 for (var i=0; i<table_len; i++){
                     table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' +
@@ -283,17 +285,6 @@
                                         </tbody>
                                     </table>
 
-                                    <hr>
-
-                                    <h5 class='card-title'>Delivering Progress per orders</h5>
-                                        <ul>
-                                            <li>highest pending order: <span id='highest_pending_order'></span> </li>
-                                            <li>highest pending item: <span id='highest_pending_item'></span></li>
-                                        </ul>
-
-
-
-
                                 </div>
                             </div>
 
@@ -301,6 +292,7 @@
                                 <div class="card-body">
                                     <h5 class='card-title'>Delivering Progress per orders</h5>
                                         <ul>
+                                            <li>Highest backlog: <span id='highest_pending_order'></span> </li>
                                             <li>Pending orders: <span id='num_pending_orders'></span> </li>
                                             <li>Completed orders: <span id='num_compl_orders'></span></li>
                                             <li>Total orders: <span id='total_orders_orders'></span></li>
@@ -354,7 +346,7 @@
                             <div class='card-deck', style="margin-bottom:15px; max-width:90rem;">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 class='card-title'>Now Delivering </h5>
+                                    <h5 class='card-title'>Now Delivering -- <span id="num_round"> </span> th laps</h5>
                                         <table class="table table-bordered" id="delivery_list" width="100%" cellspacing="0" style="text-align:center;">
                                             <thead>
                                             <tr>
