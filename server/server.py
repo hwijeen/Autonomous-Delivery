@@ -64,38 +64,15 @@ def prepare_round(deliv_dict_list):
     global deliv_list, robot
     logger.info(f'Received delivery list from scheduler: {deliv_dict_list}')
 
-    next_addr = deliv_dict_list[0]['addr']
-    if robot.is_turn(next_addr):
-        ####
-        orientation = robot.orientation
-        now_delivering = deliv_list.update_from_scheduler(deliv_dict_list, orientation)
+    orientation = robot.orientation
+    now_delivering = deliv_list.update_from_scheduler(deliv_dict_list, orientation)
 
-        emit('now_delivering', now_delivering, broadcast=True)
-        logger.info(f'Setting delivery list: {now_delivering}')
+    emit('now_delivering', now_delivering, broadcast=True)
+    logger.info(f'Setting delivery list: {now_delivering}')
 
-        curr_deliv = deliv_list.get_curr_deliv().to_dict()
-        emit('curr_deliv', curr_deliv, broadcast=True)
-        logger.info(f'Sent current delivery to UI: {curr_deliv}')
-
-        while robot.latest_addr != 0:
-            pass # wait until robot arrives at the loading dock
-
-        emit('turn', broadcast=True)
-        robot.flip_orientation()
-        time.sleep(1)
-        logger.info('flipping robot')
-
-    else:
-        ####
-        orientation = robot.orientation
-        now_delivering = deliv_list.update_from_scheduler(deliv_dict_list, orientation)
-
-        emit('now_delivering', now_delivering, broadcast=True)
-        logger.info(f'Setting delivery list: {now_delivering}')
-
-        curr_deliv = deliv_list.get_curr_deliv().to_dict()
-        emit('curr_deliv', curr_deliv, broadcast=True)
-        logger.info(f'Sent current delivery to UI: {curr_deliv}')
+    curr_deliv = deliv_list.get_curr_deliv().to_dict()
+    emit('curr_deliv', curr_deliv, broadcast=True)
+    logger.info(f'Sent current delivery to UI: {curr_deliv}')
 
 @socketio.on('load_complete')
 def start_round():
@@ -112,7 +89,6 @@ def start_round():
     next_addr = deliv_list.get_curr_deliv().addr
     if robot.is_turn(next_addr):
         emit('turn', broadcast=True)
-        robot.flip_orientation()
         time.sleep(1)
         logger.info('Flipping robot')
     robot_info = robot.upon_load_complete(next_addr)
@@ -147,7 +123,6 @@ def handle_delivery_status_from_worker(delivery_status):
         robot.upon_delivery_complete(next_deliv.addr)
         if robot.is_turn(next_deliv.addr):
             emit('turn', broadcast=True)
-            robot.flip_orientation()
             time.sleep(1)
             logger.info('Flipping robot')
         emit('robot_info', robot.to_dict(), broadcast=True)

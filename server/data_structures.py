@@ -43,6 +43,11 @@ class DBStats:
     NUM_TOTAL = 'total'
     HIGHEST_PENDING = 'highest_pending'
 
+class Addresses:
+    STOP = 0
+    LEFT = [101, 102, 103] # go clockwise
+    RIGHT = [203, 202, 201] # go counter-clockwise
+
 
 class Delivery:
     def __init__(self, addr, red, green, blue, status):
@@ -83,7 +88,12 @@ class DeliveryList: # For a round
 
     def update_from_scheduler(self, dict_list, orientation):
         self.deliv_list = [Delivery.from_dict(dic) for dic in dict_list]
-        if orientation == Orientation.COUNTERCLOCK:
+        addr_list = [a for a in self.deliv_list.addr]
+        if all([a in Addresses.LEFT for a in addr_list]):
+            pass
+        elif all([a in Addresses.RIGHT for a in addr_list]):
+            self.reverse_order()
+        elif orientation == Orientation.COUNTERCLOCK:
             self.reverse_order()
         self.deliv_sum = sum(self.deliv_list).to_dict()
         self.curr_idx = 0
@@ -171,16 +181,14 @@ class Robot:
 
     def is_turn(self, next_addr):
         if self.orientation == Orientation.CLOCK:
-            if (self.latest_addr in {101, 102} and next_addr == 0) or\
-               (self.latest_addr in {101, 102} and next_addr == 0) or\
-               (self.latest_addr == 103 and next_addr == 0) or\
+            if (self.latest_addr in {101, 102, 103} and next_addr == 0) or\
                (self.latest_addr == 0 and next_addr in {201, 202, 203}):
+                self.flip_orientation()
                 return True
         if self.orientation == Orientation.COUNTERCLOCK:
-            if (self.latest_addr in {201, 202} and next_addr == 0) or\
-               (self.latest_addr == 0 and next_addr in {101, 102, 103}) or\
-               (self.latest_addr == 203 and next_addr == 0) or\
-               (self.next_addr == 0 and next_addr in {101, 102, 103}):
+            if (self.latest_addr in {201, 202, 203} and next_addr == 0) or\
+               (self.latest_addr == 0 and next_addr in {101, 102, 103}):
+                self.flip_orientation()
                 return True
         return False
 
