@@ -26,7 +26,6 @@
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
 
 
-
         <script>
             var socket = io.connect();
 
@@ -53,6 +52,8 @@
 
 
             socket.on("now_delivering", function(deliv_status){
+                console.log('now_delivering received at worker')
+                console.log(deliv_status)
                 var table_len = deliv_status['deliv_list'].length;
                 var table = $('#delivery_list');
                 table.find("tbody tr").remove();
@@ -60,10 +61,16 @@
                 console.log("Table lent " + table_len)
                 console.log("deliv_Status list: " + deliv_status['deliv_list'])
 
-                if(deliv_status['deliv_list'][0]['status'] == 'complete'){
+                if(deliv_status['deliv_list'][0] == null){
+                    console.log('null')
+                }
+                else if(deliv_status['deliv_list'][0]['status'] == 'complete'){
                     console.log("not new deliv_list yet");
                     table.find("tbody tr").remove();
-                    table.find("tfoot").remove();
+                    $('#sum_r').text(" ");
+                    $('#sum_g').text(" ");
+                    $('#sum_b').text(" ");
+                    
                 }
                 else{
                     $('#num_round').text(deliv_status['num_round']);
@@ -101,7 +108,7 @@
                 }
                 else{
                     console.log(robot_info);
-                    if (robot_info['status'] == "arrived"){
+                    if (robot_info['status'] == "arrived" && robot_info['latest_addr'] != 0){
                         $('#arrive_alarm').addClass("blink-text");
                     }
                     else{

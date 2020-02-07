@@ -119,6 +119,8 @@
             })
 
             socket.on("now_delivering", function(deliv_status){
+                console.log('now_delivering received at admin')
+                console.log(deliv_status)
                 var table_len = deliv_status['deliv_list'].length;
                 var table = $('#delivery_list');
                 table.find("tbody tr").remove();

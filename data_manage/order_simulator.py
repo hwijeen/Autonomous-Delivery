@@ -2,13 +2,16 @@
 Models the arrival of orders as poisson process.
 The interval between orders is modeled as exponentional distribution.
 """
+import sys
 import time
 import random
-import sys
+import logging
 
 import numpy as np
 import mysql.connector as mysql
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def generate_arrival_times(num_orders, lambda_):
     intervals = []
@@ -67,19 +70,29 @@ def write_to_db(db, cursor, intervals, reds, greens, blues, addrs):
         values = (cust, int(r), int(g), int(b), pend, addr)
         cursor.execute(query, values)
         db.commit()
-        print(f'Addr: {addr}, Red: {r}, Green: {g}, Blue: {b}', end='\n\n')
+        logger.info(f'Addr: {addr}, Red: {r}, Green: {g}, Blue: {b}\n')
+        print(f'Addr: {addr}, Red: {r}, Green: {g}, Blue: {b}\n')
+
+def write_to_file(outfname, addrs, reds, greens, blues):
+    f = open(outfname, 'w')
+    for addr, r, g, b in zip(addrs, reds, greens, blues):
+        print(f'{addr}\t{r}\t{g}\t{b}', file=f)
+    print('-'*80, file=f)
+    print(f'Num orders: {len(addrs)}', file=f)
+    print(f'Sum of items: Red({sum(reds)}), Greens({sum(greens)}), Blues({sum(blues)})', file=f)
 
 
 if __name__ == "__main__":
 
-    NUM_ORDERS = 20
+    NUM_ORDERS = 10
     NUM_ORDERS_PER_HOUR = 300
 
     db, cursor = get_db()
 
     delete_all_in_table(db, cursor)
     intervals, _ = generate_arrival_times(NUM_ORDERS, lambda_=NUM_ORDERS_PER_HOUR)
-    reds, greens, blues = generate_num_items(NUM_ORDERS, n=20, p=0.2)
+    reds, greens, blues = generate_num_items(NUM_ORDERS, n=5, p=0.5)
     addrs = generate_addresses(NUM_ORDERS)
     write_to_db(db, cursor, intervals, reds, greens, blues, addrs)
+    write_to_file('generated_orders.txt', addrs, reds, greens, blues)
 

@@ -13,6 +13,7 @@ RED = 'red'
 GREEN = 'green'
 BLUE = 'blue'
 STATUS = 'status'
+NUM_ROUND = 'num_round'
 
 class NUM_ITEM:
     RED = 26
@@ -80,6 +81,7 @@ class DeliveryList: # For a round
         self.deliv_list = []
         self.deliv_sum = {}
         self.curr_idx = 0
+        self.num_round = 0
 
     def reverse_order(self):
         stop = self.deliv_list.pop(-1)
@@ -88,7 +90,7 @@ class DeliveryList: # For a round
 
     def update_from_scheduler(self, dict_list, orientation):
         self.deliv_list = [Delivery.from_dict(dic) for dic in dict_list]
-        addr_list = [a for a in self.deliv_list.addr]
+        addr_list = [d.addr for d in self.deliv_list[:-1]]
         if all([a in Addresses.LEFT for a in addr_list]):
             pass
         elif all([a in Addresses.RIGHT for a in addr_list]):
@@ -97,6 +99,7 @@ class DeliveryList: # For a round
             self.reverse_order()
         self.deliv_sum = sum(self.deliv_list).to_dict()
         self.curr_idx = 0
+        self.num_round += 1
         return self.to_dict()
 
     def get_curr_deliv(self):
@@ -110,9 +113,8 @@ class DeliveryList: # For a round
         return self.to_dict(), self.get_curr_deliv()
 
     def to_dict(self):
-        #deliv_list = [d.to_dict() for d in self.deliv_list[self.curr_idx:]]
         deliv_list = [d.to_dict() for d in self.deliv_list[:-1]] # drop stop
-        return {DELIV_LIST: deliv_list, SUM: self.deliv_sum}
+        return {DELIV_LIST: deliv_list, SUM: self.deliv_sum, NUM_ROUND: self.num_round}
 
 class Inventory:
     def __init__(self, red, blue, green):
@@ -151,6 +153,7 @@ class Robot:
 
     def update_from_robot(self, robot_info):
         self.latest_addr = robot_info[LATEST_ADDR]
+        self.next_addr = robot_info[NEXT_ADDR]
         self.status = robot_info[STATUS]
         #self.orientation = robot_info[ORIENTATION]
         return self.to_dict()
@@ -214,7 +217,7 @@ class DataBase:
         num_backlog = db_stats[DBStats.NUM_PENDING + f'_{self.name}']
         num_total = db_stats[DBStats.NUM_TOTAL + f'_{self.name}']
         self.writer.add_scalar(f'Backlogs_over_time{self.name}', num_backlog, self.step)
-        self.writer.add_scalar(f'Total_{self.name}s_over_time{self.name}', num_total, self.step)
+        self.writer.add_scalar(f'Total_{self.name}s_over_time({self.name})', num_total, self.step)
         self.step += 1
 
     def set_from_dict(self, dic):

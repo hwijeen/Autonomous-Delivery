@@ -53,11 +53,11 @@ def refresh():
 
 @socketio.on('connect')
 def connect():
-    logger.info('Client connected')
+    logger.info(f'Client connected: {request.remote_addr}')
 
 @socketio.on('disconnect')
 def disconnect():
-    logger.info('Client disconnected')
+    logger.info(f'Client disconnected: {request.remote_addr}')
 
 @socketio.on('deliv_list')
 def prepare_round(deliv_dict_list):
@@ -68,7 +68,7 @@ def prepare_round(deliv_dict_list):
     now_delivering = deliv_list.update_from_scheduler(deliv_dict_list, orientation)
 
     emit('now_delivering', now_delivering, broadcast=True)
-    logger.info(f'Setting delivery list: {now_delivering}')
+    logger.info(f'Setting delivery list and sent to UI: {now_delivering}')
 
     curr_deliv = deliv_list.get_curr_deliv().to_dict()
     emit('curr_deliv', curr_deliv, broadcast=True)
@@ -137,6 +137,7 @@ def handle_robot_status(robot_status):
     global robot
     robot_info = robot.set_status(robot_status)
     emit('robot_info', robot_info, broadcast=True)
+    logger.info(f'Put robot into {robot_status}')
 
 @socketio.on('replenish')
 def update_loading_dock():
