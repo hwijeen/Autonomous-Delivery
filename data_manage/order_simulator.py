@@ -1,5 +1,5 @@
 """
-Models the orders as poisson process.
+Models the arrival of orders as poisson process.
 The interval between orders is modeled as exponentional distribution.
 """
 import time
@@ -31,7 +31,7 @@ def generate_num_items(num_orders, n, p):
     return reds, greens, blues
 
 def generate_addresses(num_orders):
-    addresses = [101, 102, 201, 301, 302, 303]
+    addresses = [101, 102, 103, 201, 202, 203]
     addrs = []
     for _ in range(num_orders):
         addrs.append(int(np.random.choice(addresses)))
@@ -41,7 +41,7 @@ def get_db():
     try:
         host_ip = sys.argv[1]
     except:
-        host_ip = '172.26.226.35'
+        host_ip = '172.26.220.250'
     db = mysql.connect(host=host_ip,
                        user="user",
                        passwd="hotmetal",
@@ -50,8 +50,10 @@ def get_db():
     return db, cursor
 
 def delete_all_in_table(db, cursor):
-    query = 'DELETE FROM orders'
-    cursor.execute(query)
+    query_1 = 'DELETE FROM orders'
+    query_2 = 'DELETE FROM items'
+    cursor.execute(query_1)
+    cursor.execute(query_2)
     db.commit()
 
 def write_to_db(db, cursor, intervals, reds, greens, blues, addrs):
@@ -70,14 +72,14 @@ def write_to_db(db, cursor, intervals, reds, greens, blues, addrs):
 
 if __name__ == "__main__":
 
-    NUM_ORDERS = 50
-    #NUM_ORDERS_PER_HOUR = 600
+    NUM_ORDERS = 20
     NUM_ORDERS_PER_HOUR = 300
 
     db, cursor = get_db()
 
+    delete_all_in_table(db, cursor)
     intervals, _ = generate_arrival_times(NUM_ORDERS, lambda_=NUM_ORDERS_PER_HOUR)
-    reds, greens, blues = generate_num_items(NUM_ORDERS, n=20, p=0.5)
+    reds, greens, blues = generate_num_items(NUM_ORDERS, n=20, p=0.2)
     addrs = generate_addresses(NUM_ORDERS)
     write_to_db(db, cursor, intervals, reds, greens, blues, addrs)
 

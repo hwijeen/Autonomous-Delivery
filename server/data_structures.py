@@ -1,5 +1,5 @@
-import numpy as np
 import cv2
+import numpy as np
 
 from server_utils import only_when_not_empty
 
@@ -41,6 +41,7 @@ class DBStats:
     NUM_PENDING = 'pending'
     NUM_COMPLETE = 'complete'
     NUM_TOTAL = 'total'
+    HIGHEST_PENDING = 'highest_pending'
 
 
 class Delivery:
@@ -170,18 +171,16 @@ class Robot:
 
     def is_turn(self, next_addr):
         if self.orientation == Orientation.CLOCK:
-            if self.latest_addr in {101, 102} and next_addr == 0:
-                self.flip_orientation()
-                return True
-            elif self.latest_addr == 0 and next_addr in {201, 202, 203}:
-                self.flip_orientation()
+            if (self.latest_addr in {101, 102} and next_addr == 0) or\
+               (self.latest_addr in {101, 102} and next_addr == 0) or\
+               (self.latest_addr == 103 and next_addr == 0) or\
+               (self.latest_addr == 0 and next_addr in {201, 202, 203}):
                 return True
         if self.orientation == Orientation.COUNTERCLOCK:
-            if self.latest_addr in {201, 202} and next_addr == 0:
-                self.flip_orientation()
-                return True
-            elif self.latest_addr == 0 and next_addr in {101, 102, 103}:
-                self.flip_orientation()
+            if (self.latest_addr in {201, 202} and next_addr == 0) or\
+               (self.latest_addr == 0 and next_addr in {101, 102, 103}) or\
+               (self.latest_addr == 203 and next_addr == 0) or\
+               (self.next_addr == 0 and next_addr in {101, 102, 103}):
                 return True
         return False
 
@@ -200,6 +199,7 @@ class DataBase:
         self.num_pending = 0
         self.num_complete = 0
         self.num_total = 0
+        self.highest_pending = 0
         self.step = 1
 
     def write_to_tensorboard(self, db_stats):
@@ -213,12 +213,14 @@ class DataBase:
         self.num_pending = dic[DBStats.NUM_PENDING + f'_{self.name}']
         self.num_complete = dic[DBStats.NUM_COMPLETE + f'_{self.name}']
         self.num_total = self.num_pending + self.num_complete
+        self.highest_pending = max(self.highest_pending, self.num_pending)
         return self.to_dict()
 
     def to_dict(self):
         return {DBStats.NUM_PENDING + f'_{self.name}': self.num_pending,
                 DBStats.NUM_COMPLETE + f'_{self.name}': self.num_complete,
-                DBStats.NUM_TOTAL + f'_{self.name}': self.num_total}
+                DBStats.NUM_TOTAL + f'_{self.name}': self.num_total,
+                DBStats.HIGHEST_PENDING + f'_{self.name}': self.highest_pending}
 
 class Video:
     def __init__(self):

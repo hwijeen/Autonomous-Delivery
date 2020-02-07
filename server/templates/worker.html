@@ -58,14 +58,22 @@
                 console.log("Table lent " + table_len)
                 console.log("deliv_Status list: " + deliv_status['deliv_list'])
 
-                for (var i=0; i<table_len; i++){
-                    table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' +
-                     deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] + '</td></tr>')
+                if(deliv_status['deliv_list'][0]['status'] == 'complete'){
+                    console.log("My name is Soyeon")
                 }
+                else{
 
-                $('#sum_r').text(deliv_status['sum']['red']);
-                $('#sum_g').text(deliv_status['sum']['green']);
-                $('#sum_b').text(deliv_status['sum']['blue']);
+
+
+                    for (var i=0; i<table_len; i++){
+                        table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' +
+                         deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] + '</td></tr>')
+                    }
+
+                    $('#sum_r').text(deliv_status['sum']['red']);
+                    $('#sum_g').text(deliv_status['sum']['green']);
+                    $('#sum_b').text(deliv_status['sum']['blue']);
+                }
                     // socket.emit("request5");
                 // socket.emit("request3");
                 var table_len = deliv_status['deliv_list'].length;
