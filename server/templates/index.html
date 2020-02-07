@@ -111,6 +111,9 @@
                     $('#prog_bar_per_items').css("width", percent_item );
                     $('#perc_item').text(percent_item + " Complete(success)");
 
+                    $('#highest_pending_item').text(deliv_prog['highest_pending_item']);
+                    $('#highest_pending_order').text(deliv_prog['highest_pending_order']);
+
                     // socket.emit("request2");
                 }
             })
@@ -279,6 +282,17 @@
                                             </tr>
                                         </tbody>
                                     </table>
+
+                                    <hr>
+
+                                    <h5 class='card-title'>Delivering Progress per orders</h5>
+                                        <ul>
+                                            <li>highest pending order: <span id='highest_pending_order'></span> </li>
+                                            <li>highest pending item: <span id='highest_pending_item'></span></li>
+                                        </ul>
+
+
+
 
                                 </div>
                             </div>
