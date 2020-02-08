@@ -1,6 +1,7 @@
 """
 Models the arrival of orders as poisson process.
 The interval between orders is modeled as exponentional distribution.
+Writes order directly to DB.
 """
 import sys
 import time
