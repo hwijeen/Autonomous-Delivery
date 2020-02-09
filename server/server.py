@@ -87,13 +87,13 @@ def start_round():
     emit('loading_dock_inv', loading_dock_inv, broadcast=True)
 
     next_addr = deliv_list.get_curr_deliv().addr
-    if robot.is_turn(next_addr):
+    robot_info = robot.get_ready_for_next_deliv(next_addr)
+    if robot.is_turn():
         emit('turn', broadcast=True)
         time.sleep(1)
         logger.info('Flipping robot')
-    robot_info = robot.upon_load_complete(next_addr)
-    emit('robot_info', robot_info, broadcast=True)
-    logger.info(f'Sending info to robot {robot_info}')
+    emit('robot_info', robot.to_dict(), broadcast=True)
+    logger.info(f'Sending info to robot: {robot_info}')
 
 @socketio.on('robot_info')
 def update_from_robot(robot_info):
@@ -120,8 +120,8 @@ def handle_delivery_status_from_worker(delivery_status):
 
         emit('unload_complete', DeliveryStatus.COMPLETE, broadcast=True)
 
-        robot.upon_delivery_complete(next_deliv.addr)
-        if robot.is_turn(next_deliv.addr):
+        robot.get_ready_for_next_deliv(next_deliv.addr)
+        if robot.is_turn():
             emit('turn', broadcast=True)
             time.sleep(1)
             logger.info('Flipping robot')

@@ -168,12 +168,7 @@ class Robot:
         self.latest_addr = 0
         return self.to_dict()
 
-    def upon_delivery_complete(self, next_addr):
-        self.next_addr = next_addr
-        self.status = RobotStatus.DELIVERING
-        return self.to_dict()
-
-    def upon_load_complete(self, next_addr):
+    def get_ready_for_next_deliv(self, next_addr):
         self.next_addr = next_addr
         self.status = RobotStatus.DELIVERING
         return self.to_dict()
@@ -182,15 +177,15 @@ class Robot:
         self.orientation = Orientation.CLOCK if self.orientation == Orientation.COUNTERCLOCK else Orientation.COUNTERCLOCK
         return self.orientation
 
-    def is_turn(self, next_addr):
+    def is_turn(self):
         if self.orientation == Orientation.CLOCK:
-            if (self.latest_addr in {101, 102, 103} and next_addr == 0) or\
-               (self.latest_addr == 0 and next_addr in {201, 202, 203}):
+            if (self.latest_addr in {101, 102, 103} and self.next_addr == 0) or\
+               (self.latest_addr == 0 and self.next_addr in {201, 202, 203}):
                 self.flip_orientation()
                 return True
         if self.orientation == Orientation.COUNTERCLOCK:
-            if (self.latest_addr in {201, 202, 203} and next_addr == 0) or\
-               (self.latest_addr == 0 and next_addr in {101, 102, 103}):
+            if (self.latest_addr in {201, 202, 203} and self.next_addr == 0) or\
+               (self.latest_addr == 0 and self.next_addr in {101, 102, 103}):
                 self.flip_orientation()
                 return True
         return False
@@ -213,11 +208,11 @@ class DataBase:
         self.highest_pending = 0
         self.step = 1
 
-    def write_to_tensorboard(self, db_stats):
+    def write_to_tensorboard(self, db_stats, walltime=None):
         num_backlog = db_stats[DBStats.NUM_PENDING + f'_{self.name}']
         num_total = db_stats[DBStats.NUM_TOTAL + f'_{self.name}']
-        self.writer.add_scalar(f'Backlogs_over_time{self.name}', num_backlog, self.step)
-        self.writer.add_scalar(f'Total_{self.name}s_over_time({self.name})', num_total, self.step)
+        self.writer.add_scalar(f'Backlogs_over_time{self.name}', num_backlog, self.step, walltime)
+        self.writer.add_scalar(f'Total_{self.name}s_over_time({self.name})', num_total, self.step, walltime)
         self.step += 1
 
     def set_from_dict(self, dic):

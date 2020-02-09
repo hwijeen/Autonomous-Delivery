@@ -55,9 +55,9 @@ def get_db():
 
 def delete_all_in_table(db, cursor):
     query_1 = 'DELETE FROM orders'
-    query_2 = 'DELETE FROM items'
+    # query_2 = 'DELETE FROM items'
     cursor.execute(query_1)
-    cursor.execute(query_2)
+    # cursor.execute(query_2)
     db.commit()
 
 def write_to_db(db, cursor, intervals, reds, greens, blues, addrs):
