@@ -230,6 +230,9 @@ class Scheduler():
 
 
     def update_item_tables(self, data):
+        print()
+        print('updating!!!')
+        print()
         # 1. Get addreses and the number of to-be-loaded cubes
         delivery = self.delivery_list[0]
         rev_list = self.rev_list
@@ -299,18 +302,18 @@ class Scheduler():
                 self.db.commit()
 
         if delivery['addr'] != 0:
+            print('hererer')
             del self.delivery_list[0]
 
     def send_message(self):
+        print(f"Emiting {self.delivery_list}")
         self.sio.emit('deliv_list', self.delivery_list)
 
     def get_message(self, data):
         update_item_tables(delivery_, rev_list)
         del self.delivery_list[0]
 
-
-
-    # For checking backlog 
+    # For checking backlog
     def check_max_delay(self, cursor, orders):
         max_time = max(orders[:,0])
         cur_time = datetime.datetime.now()
@@ -333,6 +336,7 @@ def main():
         scheduler.get_reverse_ref_list()
         scheduler.append_stop()
         if len(deliv_list) != 1:
+            print(f'emiting {deliv_list}')
             socket.sio.emit('deliv_list', deliv_list)
 
         global flag_
@@ -348,3 +352,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

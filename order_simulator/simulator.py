@@ -1,10 +1,12 @@
+import time
+import logging
 import sys; sys.path.append('../server')
 from datetime import datetime, timedelta
 
 import numpy as np
 import socketio
 import eventlet
-from threading import Lock
+from threading import Lock, Thread
 from torch.utils.tensorboard import SummaryWriter
 
 from simulator_utils import read_time_files
@@ -14,59 +16,59 @@ from data_structures import Robot, DeliveryList, DataBase
 LOADING_TIME = 5
 UNLOADING_TIME = 5
 
-queue = []
-queue_lock = Lock()
+# TODO: queue is not necessary
 start = datetime(2020, 1, 1, 0, 0, 0)
 now = datetime(2020, 1, 1, 0, 0, 0)
 time_lock = Lock()
-init_flag = False
 
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
 
 
-@sio.on('deliv_list')
-def stack_deliv_list(deliv_dict_list):
-    global queue, robot
-    deliv_list = DeliveryList()
-    deliv_list.update_from_scheduler(deliv_dict_list, robot.orientation)
+@sio.on('connect')
+def greeting(*args):
+    print(f'Connected')
 
-    queue_lock.acquire(); queue.append(deliv_list); queue_lock.release()
+@sio.on('deliv_list')
+def stack_deliv_list(sid, deliv_dict_list):
+    global robot, deliv_list
+    deliv_list.update_from_scheduler(deliv_dict_list, robot.orientation)
 
     simulate_round()
 
 def simulate_round():
-    global init_flag
-    if not init_flag: return # runs only once
-    init_flag = True
+    global now, timer, deliv_list
+    print('='*80)
+    print(f'Simulation starting for round {deliv_list.num_round}')
+    print('-'.join([str(d.addr) for d in deliv_list.deliv_list]))
 
-    global queue, now, timer
-    while len(queue) != 0:
-        queue_lock.acquire(); this_round = queue.pop(0); queue_lock.release()
+    for deliv in deliv_list.deliv_list:
+        robot.get_ready_for_next_deliv(deliv.addr)
 
-        for deliv in this_round.deliv_list:
-            robot.get_ready_for_next_deliv(deliv.addr)
+        if robot.is_turn():
+            turn_sec = timer.turn_time(at=robot.latest_addr)
+            print(f"\tTurning robot at {robot.latest_addr}: took {turn_sec:.2f} seconds.")
+            time_lock.acquire(); now += timedelta(seconds=turn_sec); time_lock.release()
 
-            if robot.is_turn():
-                turn_sec = timer.turn_time(at=robot.latest_addr)
-                print("Turning robot at {robot.latest_addr}: took {turn_sec} seconds.")
-                time_lock.acquire(); now += timedelta(seconds=turn_sec); time_lock.release()
+        travel_sec = timer.travel_time(robot.orientation, robot.latest_addr, deliv.addr)
+        print(f"Driving robot from {robot.latest_addr} to {robot.next_addr} took {travel_sec:.2f} seconds")
+        time_lock.acquire(); now += timedelta(seconds=travel_sec); time_lock.release()
+        # TODO: when robot.get_ready_for_next_deliv is updated, delete the below line
+        robot.latest_addr = robot.next_addr
 
-            travel_sec = timer.travel_time(robot.orientation, robot.latest_addr, deliv.addr)
-            print("Driving robot from {robot.latest_addr} to {robot.next_addr} took {travel_sec} seconds")
-            time_lock.acquire(); now += timedelta(seconds=travel_sec); time_lock.release()
+        if deliv.addr != 0:
+            unloading_sec = timer.unloading_time()
+            print(f"\tUnloading took {unloading_sec:.2f} seconds")
+            time_lock.acquire(); now += timedelta(seconds=unloading_sec); time_lock.release()
 
-            if deliv.addr != 0:
-                unloading_sec = timer.unloading_time()
-                print("Unloading took {unloading_sec} seconds")
-                time_lock.acquire(); now += timedelta(seconds=unloading_sec); time_lock.release()
-
-            sio.emit('unload_complete', 'complete', broadcast=True) # to scheduler
-            print()
+        sio.emit('unload_complete') # to scheduler
+        print('Sent unload complete message to the scheduler')
+    print('='*80)
 
 @sio.on('deliv_prog')
-def update_deliv_prog(deliv_prog):
+def update_deliv_prog(sid, deliv_prog):
     global order_db, item_db, now, start
+    print(f'Delivery progress received from scheduler: {deliv_prog}')
     order_db_stats = order_db.set_from_dict(deliv_prog)
     item_db_stats = item_db.set_from_dict(deliv_prog)
     db_stats = {**order_db_stats, **item_db_stats}
@@ -118,4 +120,4 @@ if __name__ == "__main__":
     order_db = DataBase('order', writer)
     item_db = DataBase('item', writer)
 
-    eventlet.wsgi.server(eventlet.listen(('', 5000)), app)
+    eventlet.wsgi.server(eventlet.listen(('', 60000)), app, log_output=False)
