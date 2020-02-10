@@ -16,10 +16,8 @@ from data_structures import Robot, DeliveryList, DataBase
 LOADING_TIME = 5
 UNLOADING_TIME = 5
 
-# TODO: queue is not necessary
 start = datetime(2020, 1, 1, 0, 0, 0)
 now = datetime(2020, 1, 1, 0, 0, 0)
-time_lock = Lock()
 
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
@@ -35,6 +33,7 @@ def stack_deliv_list(sid, deliv_dict_list):
     deliv_list.update_from_scheduler(deliv_dict_list, robot.orientation)
 
     simulate_round()
+    sio.emit('request_deliv_list') # almost same as in the last address
 
 def simulate_round():
     global now, timer, deliv_list
@@ -48,20 +47,20 @@ def simulate_round():
         if robot.is_turn():
             turn_sec = timer.turn_time(at=robot.latest_addr)
             print(f"\tTurning robot at {robot.latest_addr}: took {turn_sec:.2f} seconds.")
-            time_lock.acquire(); now += timedelta(seconds=turn_sec); time_lock.release()
+            now += timedelta(seconds=turn_sec)
 
         travel_sec = timer.travel_time(robot.orientation, robot.latest_addr, deliv.addr)
         print(f"Driving robot from {robot.latest_addr} to {robot.next_addr} took {travel_sec:.2f} seconds")
-        time_lock.acquire(); now += timedelta(seconds=travel_sec); time_lock.release()
+        now += timedelta(seconds=travel_sec)
         # TODO: when robot.get_ready_for_next_deliv is updated, delete the below line
         robot.latest_addr = robot.next_addr
 
         if deliv.addr != 0:
             unloading_sec = timer.unloading_time()
             print(f"\tUnloading took {unloading_sec:.2f} seconds")
-            time_lock.acquire(); now += timedelta(seconds=unloading_sec); time_lock.release()
+            now += timedelta(seconds=unloading_sec)
 
-        sio.emit('unload_complete') # to scheduler
+        sio.emit('unload_complete', now.strftime('%Y-%m-%d %H:%M:%S')) # to scheduler
         print('Sent unload complete message to the scheduler')
     print('='*80)
 
@@ -72,9 +71,7 @@ def update_deliv_prog(sid, deliv_prog):
     order_db_stats = order_db.set_from_dict(deliv_prog)
     item_db_stats = item_db.set_from_dict(deliv_prog)
     db_stats = {**order_db_stats, **item_db_stats}
-    time_lock.acquire
     walltime = (now - start).total_seconds()
-    time_lock.release
     order_db.write_to_tensorboard(db_stats, walltime)
     item_db.write_to_tensorboard(db_stats, walltime)
 

@@ -7,26 +7,32 @@ import sys
 import time
 import random
 import logging
+import argparse
+from datetime import datetime, timedelta
 
 import numpy as np
 import mysql.connector as mysql
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
-def generate_arrival_times(num_orders, lambda_):
-    intervals = []
-    arrival_times = []
-    arrival_time = 0
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt = '%m/%d/%Y %H:%M:%S', level=logging.INFO)
+
+
+def generate_arrival_times(now, num_orders, lambda_):
+    """ Interval follows exponentional distribution """
+    intervals = [] # list of timedeltas
+    arrival_times = [] # list of datetimes
     for i in range(num_orders):
         beta = 1 / lambda_ # required by numpy.random.exponentional
-        interval = np.random.exponential(beta)
-        arrival_time += interval
-        intervals.append(interval * 60 * 60) # in seconds
-        arrival_times.append(arrival_time * 60) # in minutes
+        interval = timedelta(hours=np.random.exponential(beta))
+        now += interval
+        intervals.append(interval)
+        arrival_times.append(now)
     return intervals, arrival_times
 
 def generate_num_items(num_orders, n, p):
+    """ Number of items follows a binomial distribution """
     reds, greens, blues = [], [], []
     for _ in range(num_orders):
         reds.append(np.random.binomial(n, p))
@@ -35,17 +41,14 @@ def generate_num_items(num_orders, n, p):
     return reds, greens, blues
 
 def generate_addresses(num_orders):
+    """ Uniformly choose adresses """
     addresses = [101, 102, 103, 201, 202, 203]
     addrs = []
     for _ in range(num_orders):
         addrs.append(int(np.random.choice(addresses)))
     return addrs
 
-def get_db():
-    try:
-        host_ip = sys.argv[1]
-    except:
-        host_ip = '172.26.220.250'
+def get_db(host_ip):
     db = mysql.connect(host=host_ip,
                        user="user",
                        passwd="hotmetal",
@@ -55,45 +58,51 @@ def get_db():
 
 def delete_all_in_table(db, cursor):
     query_1 = 'DELETE FROM orders'
-    # query_2 = 'DELETE FROM items'
+    query_2 = 'DELETE FROM items'
     cursor.execute(query_1)
-    # cursor.execute(query_2)
+    cursor.execute(query_2)
     db.commit()
 
-def write_to_db(db, cursor, intervals, reds, greens, blues, addrs):
-    for intv, r, g, b, addr in zip(intervals, reds, greens, blues, addrs):
-        print(f'Time interval for this order: {intv:.2f} seconds')
-        time.sleep(intv)
-        query = "INSERT INTO orders (customer, red, green, blue, pending, address) " \
-                "VALUES (%s, %s, %s, %s, %s, %s)"
+def write_to_db(db, cursor, intervals, arrival_times, reds, greens, blues,\
+                addrs, real_time):
+    for intv, arrv, r, g, b, addr in zip(intervals, arrival_times, reds,\
+                                         greens, blues, addrs):
+        if real_time:
+            time.sleep(intv.total_seconds())
+
+        query = "INSERT INTO orders\
+                (customer, red, green, blue, pending, orderdate, address)\
+                VALUES (%s, %s, %s, %s, %s, %s, %s)"
         cust = 'a' # not important
         pend = 1
-        values = (cust, int(r), int(g), int(b), pend, addr)
+        orderd = arrv.strftime('%Y-%m-%d %H:%M:%S')
+        values = (cust, int(r), int(g), int(b), pend, orderd, addr)
         cursor.execute(query, values)
         db.commit()
-        logger.info(f'Addr: {addr}, Red: {r}, Green: {g}, Blue: {b}\n')
-        print(f'Addr: {addr}, Red: {r}, Green: {g}, Blue: {b}\n')
-
-def write_to_file(outfname, addrs, reds, greens, blues):
-    f = open(outfname, 'w')
-    for addr, r, g, b in zip(addrs, reds, greens, blues):
-        print(f'{addr}\t{r}\t{g}\t{b}', file=f)
-    print('-'*80, file=f)
-    print(f'Num orders: {len(addrs)}', file=f)
-    print(f'Sum of items: Red({sum(reds)}), Greens({sum(greens)}), Blues({sum(blues)})', file=f)
+        logger.info(f'Addr: {addr}, Red: {r}, Green: {g}, Blue: {b}, Order date: {orderd}')
 
 
 if __name__ == "__main__":
 
-    NUM_ORDERS = 10
-    NUM_ORDERS_PER_HOUR = 300
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host_ip', default='172.26.220.250')
+    parser.add_argument('--real_time', action='store_true')
+    parser.add_argument('--keep_db', action='store_true')
+    parser.add_argument('--num_orders', type=int, default=10)
+    parser.add_argument('--num_orders_per_hour', type=int, default=300)
+    args = parser.parse_args()
 
-    db, cursor = get_db()
+    now = datetime(2020, 1, 1)
 
-    delete_all_in_table(db, cursor)
-    intervals, _ = generate_arrival_times(NUM_ORDERS, lambda_=NUM_ORDERS_PER_HOUR)
-    reds, greens, blues = generate_num_items(NUM_ORDERS, n=5, p=0.5)
-    addrs = generate_addresses(NUM_ORDERS)
-    write_to_db(db, cursor, intervals, reds, greens, blues, addrs)
-    write_to_file('generated_orders.txt', addrs, reds, greens, blues)
+    db, cursor = get_db(args.host_ip)
+
+    if not args.keep_db:
+        delete_all_in_table(db, cursor)
+
+    intervals, arrival_times = generate_arrival_times(now, args.num_orders,\
+                                                      args.num_orders_per_hour)
+    reds, greens, blues = generate_num_items(args.num_orders, n=5, p=0.5)
+    addrs = generate_addresses(args.num_orders)
+    write_to_db(db, cursor, intervals, arrival_times, reds, greens, blues,\
+                addrs, args.real_time)
 
