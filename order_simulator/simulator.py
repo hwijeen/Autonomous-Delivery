@@ -33,6 +33,7 @@ def stack_deliv_list(sid, deliv_dict_list):
     deliv_list.update_from_scheduler(deliv_dict_list, robot.orientation)
 
     simulate_round()
+
     sio.emit('request_deliv_list') # almost same as in the last address
 
 def simulate_round():
