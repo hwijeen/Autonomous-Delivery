@@ -119,7 +119,7 @@
                 }
                 else{
                     console.log(robot_info);
-                    if (robot_info['status'] == "arrived"){
+                    if (robot_info['status'] == "arrived" && robot_info['latest_addr'] != 0){
                         $('#arrive_alarm').addClass("blink-text");
                     }
                     else{
