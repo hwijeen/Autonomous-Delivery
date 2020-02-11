@@ -57,6 +57,7 @@ def get_db(host_ip):
     return db, cursor
 
 def delete_all_in_table(db, cursor):
+    logger.info("Delteting everthing in db")
     query_1 = 'DELETE FROM orders'
     query_2 = 'DELETE FROM items'
     cursor.execute(query_1)
@@ -65,6 +66,7 @@ def delete_all_in_table(db, cursor):
 
 def write_to_db(db, cursor, intervals, arrival_times, reds, greens, blues,\
                 addrs, real_time):
+    logger.info("Writing to db starting!")
     for intv, arrv, r, g, b, addr in zip(intervals, arrival_times, reds,\
                                          greens, blues, addrs):
         if real_time:
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument('--host_ip', default='172.26.220.250')
     parser.add_argument('--real_time', action='store_true')
     parser.add_argument('--keep_db', action='store_true')
-    parser.add_argument('--num_orders', type=int, default=10)
+    parser.add_argument('--num_orders', type=int, default=20)
     parser.add_argument('--num_orders_per_hour', type=int, default=300)
     args = parser.parse_args()
 

@@ -90,7 +90,7 @@ def start_round():
     robot_info = robot.get_ready_for_next_deliv(next_addr)
     if robot.is_turn():
         emit('turn', broadcast=True)
-        time.sleep(1)
+        # time.sleep(2)
         logger.info('Flipping robot')
     emit('robot_info', robot.to_dict(), broadcast=True)
     logger.info(f'Sending info to robot: {robot_info}')
@@ -106,6 +106,11 @@ def update_from_robot(robot_info):
 def handle_delivery_status_from_worker(delivery_status):
     global deliv_list, robot
     if delivery_status == Arrived.CORRECT:
+        arrived_addr = deliv_list.get_curr_deliv().addr
+        #emit('unload_complete', DeliveryStatus.COMPLETE, broadcast=True)
+        emit('unload_complete', arrived_addr, broadcast=True)
+        logger.info(f'Sent delivery complete message for addr: {arrived_addr}')
+
         to_unload = deliv_list.get_curr_deliv().to_dict()
         robot_inv = robot.inventory.unfill(to_unload)
         emit('robot_inv', robot_inv, broadcast=True)
@@ -118,13 +123,11 @@ def handle_delivery_status_from_worker(delivery_status):
         emit('curr_deliv', curr_deliv, broadcast=True)
         logger.info(f'Sent current delivery to UI: {curr_deliv}')
 
-        emit('unload_complete', DeliveryStatus.COMPLETE, broadcast=True)
-
         robot.get_ready_for_next_deliv(next_deliv.addr)
         if robot.is_turn():
             emit('turn', broadcast=True)
-            time.sleep(1)
             logger.info('Flipping robot')
+            # time.sleep(2)
         emit('robot_info', robot.to_dict(), broadcast=True)
         logger.info(f'Sending info to robot {robot.to_dict()}')
 

@@ -228,14 +228,3 @@ class DataBase:
                 DBStats.NUM_COMPLETE + f'_{self.name}': self.num_complete,
                 DBStats.NUM_TOTAL + f'_{self.name}': self.num_total,
                 DBStats.HIGHEST_PENDING + f'_{self.name}': self.highest_pending}
-
-class Video:
-    def __init__(self):
-        self.frame = b''
-
-    def set_frame(self, stringData):
-        self.frame = stringData
-
-    def get_frame(self):
-        return self.frame
-

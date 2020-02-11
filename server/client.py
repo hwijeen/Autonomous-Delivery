@@ -38,13 +38,12 @@ def make_delivery_list():
     return deliv_list
 
 def get_cmd_data(cmd_id):
-    deliv_list = ('deliv_list', make_delivery_list())
-    arrived_info = ('robot_info', {'latest_addr':102, 'next_addr':103, 'status' :'arrived', 'orientation':'clockwise'})
-    stop_info = ('robot_info', {'latest_addr':0, 'next_addr':0, 'status': 'arrived', 'orientation':'clockwise'})
-    id_to_data = {'1': deliv_list, '2': arrived_info, '3':stop_info}
-
-    return id_to_data[cmd_id]
-
+    if cmd_id == '1':
+        return ('deliv_list', make_delivery_list())
+    elif cmd_id == '2':
+        return ('robot_info', {'latest_addr':102, 'next_addr':102, 'status' :'arrived', 'orientation':'clockwise'})
+    elif cmd_id == '3':
+        return ('robot_info', {'latest_addr':0, 'next_addr':None, 'status': 'arrived', 'orientation':'clockwise'})
 
 command = """
 1. Make deliv list like scheduler
