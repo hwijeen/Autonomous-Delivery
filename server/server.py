@@ -107,7 +107,6 @@ def handle_delivery_status_from_worker(delivery_status):
     global deliv_list, robot
     if delivery_status == Arrived.CORRECT:
         arrived_addr = deliv_list.get_curr_deliv().addr
-        #emit('unload_complete', DeliveryStatus.COMPLETE, broadcast=True)
         emit('unload_complete', arrived_addr, broadcast=True)
         logger.info(f'Sent delivery complete message for addr: {arrived_addr}')
 
@@ -160,7 +159,7 @@ def update_deliv_prog(deliv_prog):
     item_db_stats = item_db.set_from_dict(deliv_prog)
     db_stats = {**order_db_stats, **item_db_stats}
     emit('deliv_prog', db_stats, broadcast=True)
-    logger.info('Update delivery progress on UI')
+    logger.info(f'Update delivery progress on UI: {db_stats}')
 
     order_db.write_to_tensorboard(db_stats)
     item_db.write_to_tensorboard(db_stats)
