@@ -64,7 +64,7 @@
                 table.find("tbody tr").remove();
 
                 console.log("Table lent " + table_len)
-                console.log("deliv_Status list: " + deliv_status['deliv_list'])
+                // console.log("deliv_Status list: " + deliv_status['deliv_list'])
 
                 if(deliv_status['deliv_list'][0]['status'] == 'complete'){
                     console.log("not new deliv_list yet");
@@ -102,7 +102,7 @@
                 var table = $('#delivery_list_unloader');
                 table.find("tbody tr").remove();
 
-                console.log("deliv_Status list: " + deliv_status['deliv_list'])
+                // console.log("deliv_Status list: " + deliv_status['deliv_list'])
 
                 for (var i=0; i<table_len; i++){
                     table.append("<tr><td>" + deliv_status['deliv_list'][i]['addr'] + '</td><td>' +
@@ -118,7 +118,7 @@
                     console.log("robot robot_status null")
                 }
                 else{
-                    console.log(robot_info);
+                    // console.log(robot_info);
                     if (robot_info['status'] == "arrived" && robot_info['latest_addr'] != 0){
                         $('#arrive_alarm').addClass("blink-text");
                     }
@@ -139,7 +139,7 @@
                     // console.log("curr_deliv: " + curr_deliv)
                     var curr_addr = curr_deliv['addr'];
                     curr_addr = curr_addr.toString();
-                    console.log(curr_addr);
+                    // console.log(curr_addr);
 
                     var addr_list = document.getElementById("delivery_list_unloader").getElementsByTagName('td');
                     for (var i=0; i<addr_list.length; i++){
@@ -147,7 +147,6 @@
                         tds_text = tds.innerHTML;
 
                         if (tds_text == curr_addr){
-                            console.log('-------------------')
                             console.log("found match addr");
                             console.log(tds);
                             $(tds).parent().css({
@@ -158,6 +157,7 @@
                                 $('#unload_complete_button').one('click', function(){
                                     socket.emit('delivery_status', "complete");
                                     console.log("unload_complete");
+                                    console.log('-------------------')
                                 })
                             })
                             // $('#unload_complete_button').one("click", robot_go);
