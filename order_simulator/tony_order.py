@@ -29,7 +29,7 @@ def unpack_orders(all_orders):
         ##########################
 
         #### Order at every 3 second ####
-        intv = timedelta(seconds=3)
+        intv = timedelta(seconds=7)
         #################################
 
         intervals.append(intv)

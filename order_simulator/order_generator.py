@@ -90,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument('--host_ip', default='172.26.220.250')
     parser.add_argument('--real_time', action='store_true')
     parser.add_argument('--keep_db', action='store_true')
-    parser.add_argument('--num_orders', type=int, default=20)
+    parser.add_argument('--num_orders', type=int, default=50)
     parser.add_argument('--num_orders_per_hour', type=int, default=300)
     args = parser.parse_args()
 
@@ -99,7 +99,9 @@ if __name__ == "__main__":
     db, cursor = get_db(args.host_ip)
 
     if not args.keep_db:
-        delete_all_in_table(db, cursor)
+        yn = input("Press y to delete tables in DB")
+        if yn == 'y':
+            delete_all_in_table(db, cursor)
 
     intervals, arrival_times = generate_arrival_times(now, args.num_orders,\
                                                       args.num_orders_per_hour)
