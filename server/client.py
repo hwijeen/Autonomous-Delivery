@@ -8,7 +8,7 @@ import numpy as np
 
 
 sio = socketio.Client()
-sio.connect('http://localhost:60000')
+sio.connect('http://localhost:60001')
 
 @sio.on('connect')
 def connect():

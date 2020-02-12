@@ -1,5 +1,4 @@
 import time
-import logging
 import sys; sys.path.append('../server')
 from datetime import datetime, timedelta
 
@@ -22,19 +21,35 @@ now = datetime(2020, 1, 1, 0, 0, 0)
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
 
+@sio.on('hello')
+def init_req(sid, msg):
+    global now
+    req_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    sio.emit('request_deliv_list', req_time) # almost same as in the last address
+    print(f'Requested delivery list at {req_time}')
 
 @sio.on('connect')
 def greeting(*args):
-    print(f'Connected')
+    print('Connected!')
 
 @sio.on('deliv_list')
 def stack_deliv_list(sid, deliv_dict_list):
-    global robot, deliv_list
+    global robot, deliv_list, now
+    if len(deliv_dict_list) == 1:
+        now += timedelta(seconds=10)
+        req_time = now.strftime('%Y-%m-%d %H:%M:%S')
+        sio.emit('request_deliv_list', req_time) # almost same as in the last address
+        print(f'Requested delivery list at {req_time}')
+        return
+
     deliv_list.update_from_scheduler(deliv_dict_list, robot.orientation)
 
     simulate_round()
 
-    sio.emit('request_deliv_list') # almost same as in the last address
+    req_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    sio.emit('request_deliv_list', req_time) # almost same as in the last address
+    print(f'Requested delivery list at {req_time}')
+
 
 def simulate_round():
     global now, timer, deliv_list
@@ -53,15 +68,16 @@ def simulate_round():
         travel_sec = timer.travel_time(robot.orientation, robot.latest_addr, deliv.addr)
         print(f"Driving robot from {robot.latest_addr} to {robot.next_addr} took {travel_sec:.2f} seconds")
         now += timedelta(seconds=travel_sec)
-        # TODO: when robot.get_ready_for_next_deliv is updated, delete the below line
-        robot.latest_addr = robot.next_addr
+
+        robot.get_ready_for_next_deliv(deliv.addr)
 
         if deliv.addr != 0:
             unloading_sec = timer.unloading_time()
             print(f"\tUnloading took {unloading_sec:.2f} seconds")
             now += timedelta(seconds=unloading_sec)
 
-        sio.emit('unload_complete', now.strftime('%Y-%m-%d %H:%M:%S')) # to scheduler
+        complete_msg = {'addr': deliv.addr, 'time': now.strftime('%Y-%m-%d %H:%M:%S')}
+        sio.emit('unload_complete', complete_msg) # to scheduler
         print('Sent unload complete message to the scheduler')
     print('='*80)
 
@@ -75,6 +91,7 @@ def update_deliv_prog(sid, deliv_prog):
     walltime = (now - start).total_seconds()
     order_db.write_to_tensorboard(db_stats, walltime)
     item_db.write_to_tensorboard(db_stats, walltime)
+    print(f'Written to tensorboard')
 
 class Timer:
     def __init__(self, clock, counterclock, turn):
@@ -88,6 +105,7 @@ class Timer:
     def travel_time(self, orientation, from_, to):
         assert orientation in {'clock', 'counterclock'}
         time_dict = self.clock if orientation == 'clock' else self.counterclock
+        print(orientation, from_, to)
         return np.random.normal(time_dict[from_][to], self.eps)
 
     def turn_time(self, at):
@@ -118,4 +136,5 @@ if __name__ == "__main__":
     order_db = DataBase('order', writer)
     item_db = DataBase('item', writer)
 
-    eventlet.wsgi.server(eventlet.listen(('', 60000)), app, log_output=False)
+    eventlet.wsgi.server(eventlet.listen(('', 60001)), app, log_output=False)
+

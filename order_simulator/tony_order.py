@@ -2,16 +2,8 @@ import time
 from datetime import timedelta
 import mysql.connector as mysql
 
-from order_generator import write_to_db, delete_all_in_table
+from order_generator import write_to_db, delete_all_in_table, get_db
 
-
-def get_db(host_ip):
-    db = mysql.connect(host=host_ip,
-                       user="user",
-                       passwd="hotmetal",
-                       database="orderdb")
-    cursor= db.cursor()
-    return db, cursor
 
 def unpack_orders(all_orders):
     intervals = []
@@ -24,12 +16,12 @@ def unpack_orders(all_orders):
         id_, name, r, g, b, pending, orderdate, filldate, addr = order
 
         ##### Same as tony's #####
-        #intv = orderdate - start_time # time delta
-        #start_time = orderdate
+        intv = orderdate - start_time # time delta
+        start_time = orderdate
         ##########################
 
         #### Order at every 3 second ####
-        intv = timedelta(seconds=7)
+        # intv = timedelta(seconds=10)
         #################################
 
         intervals.append(intv)

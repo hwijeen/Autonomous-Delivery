@@ -1,4 +1,6 @@
-import time
+"""
+Server accepts scheduler and robot as client and takes care of communication.
+"""
 import logging
 
 from flask import Flask, render_template, request, Response
@@ -90,7 +92,6 @@ def start_round():
     robot_info = robot.get_ready_for_next_deliv(next_addr)
     if robot.is_turn():
         emit('turn', broadcast=True)
-        # time.sleep(2)
         logger.info('Flipping robot')
     emit('robot_info', robot.to_dict(), broadcast=True)
     logger.info(f'Sending info to robot: {robot_info}')
@@ -126,7 +127,6 @@ def handle_delivery_status_from_worker(delivery_status):
         if robot.is_turn():
             emit('turn', broadcast=True)
             logger.info('Flipping robot')
-            # time.sleep(2)
         emit('robot_info', robot.to_dict(), broadcast=True)
         logger.info(f'Sending info to robot {robot.to_dict()}')
 
