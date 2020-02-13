@@ -20,6 +20,7 @@ now = datetime(2020, 1, 1, 0, 0, 0)
 
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
+PORT = 60001
 
 @sio.on('hello')
 def init_req(sid, msg):
@@ -47,6 +48,7 @@ def stack_deliv_list(sid, deliv_dict_list):
     simulate_round()
 
     req_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    time.sleep(3)
     sio.emit('request_deliv_list', req_time) # almost same as in the last address
     print(f'Requested delivery list at {req_time}')
 
@@ -54,10 +56,12 @@ def stack_deliv_list(sid, deliv_dict_list):
 def simulate_round():
     global now, timer, deliv_list
     print('='*80)
-    print(f'Simulation starting for round {deliv_list.num_round}')
+    start_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    print(f'Simulation starting for round {deliv_list.num_round} at {start_time}')
     print('-'.join([str(d.addr) for d in deliv_list.deliv_list]))
 
     for deliv in deliv_list.deliv_list:
+        robot.latest_addr = robot.next_addr
         robot.get_ready_for_next_deliv(deliv.addr)
 
         if robot.is_turn():
@@ -69,17 +73,20 @@ def simulate_round():
         print(f"Driving robot from {robot.latest_addr} to {robot.next_addr} took {travel_sec:.2f} seconds")
         now += timedelta(seconds=travel_sec)
 
-        robot.get_ready_for_next_deliv(deliv.addr)
+        # robot.latest_addr = robot.next_addr
+        # robot.get_ready_for_next_deliv(deliv.addr)
 
         if deliv.addr != 0:
             unloading_sec = timer.unloading_time()
             print(f"\tUnloading took {unloading_sec:.2f} seconds")
             now += timedelta(seconds=unloading_sec)
 
-        complete_msg = {'addr': deliv.addr, 'time': now.strftime('%Y-%m-%d %H:%M:%S')}
-        sio.emit('unload_complete', complete_msg) # to scheduler
-        print('Sent unload complete message to the scheduler')
-    print('='*80)
+            time.sleep(3)
+            complete_msg = {'addr': deliv.addr, 'time': now.strftime('%Y-%m-%d %H:%M:%S')}
+            sio.emit('unload_complete', complete_msg) # to scheduler
+
+            print('Sent unload complete message to the scheduler')
+    print('='*80 + '\n')
 
 @sio.on('deliv_prog')
 def update_deliv_prog(sid, deliv_prog):
@@ -105,7 +112,6 @@ class Timer:
     def travel_time(self, orientation, from_, to):
         assert orientation in {'clock', 'counterclock'}
         time_dict = self.clock if orientation == 'clock' else self.counterclock
-        print(orientation, from_, to)
         return np.random.normal(time_dict[from_][to], self.eps)
 
     def turn_time(self, at):
@@ -136,5 +142,6 @@ if __name__ == "__main__":
     order_db = DataBase('order', writer)
     item_db = DataBase('item', writer)
 
-    eventlet.wsgi.server(eventlet.listen(('', 60001)), app, log_output=False)
+    print(f'Server running at port {PORT}')
+    eventlet.wsgi.server(eventlet.listen(('', PORT)), app, log_output=False)
 

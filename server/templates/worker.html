@@ -21,6 +21,27 @@
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
 
+        <style>
+            /* for MS계열 브라우저 */
+            @keyframes blink {
+             0% {background-color: red;}
+             50% {background-color: yellow;}
+            }
+             
+            /* for Chrome, Safari */
+            @-webkit-keyframes blink {
+             0% {background-color: red;}
+             50% {background-color: yellow;}
+            }
+             
+            /* blink CSS 브라우저 별로 각각 애니메이션을 지정해 주어야 동작한다. */
+            .blinkcss {
+             font-weight:bold;
+             animation: blink 1s step-end infinite;
+             -webkit-animation: blink 1s step-end infinite;
+            }
+        </style>
+
 
         <script>
             var socket = io.connect();
@@ -29,14 +50,18 @@
 
             function robot_go(){
                 // alert("one works!");
-                console.log("======");
-                console.log("unload");
+                console.log("complete_load");
                 socket.emit('delivery_status', "complete");
-                // $('#unload_complete').css({})
+                $('#unload_complete').css({})
                 // $('#unload_complete').css({btn btn-info text-center});
-                // $("#unload_complete").removeClass("btn-info");
-                // await sleep(1000);
+                $("#unload_complete").removeClass("btn-info");
+                $('#unload_complete').addClass("btn-warning");
+                sleep(1000);
+                $("#unload_complete").removeClass("btn-warning");
+                $('#unload_complete').addClass("btn-info");
+
                 // $('#unload_complete').addClass("btn-warning");
+                // setTimeout(() => {  }, 1000);
 
                 
                 // $('#curr_deliv_add').text(" ");
@@ -62,7 +87,8 @@
 
             socket.on('connect', function(){
                 console.log("Connected");
-                socket.emit("request");
+                // socket.emit("request");
+                socket.emit("request5");
             });
 
 
@@ -117,7 +143,7 @@
                      deliv_status['deliv_list'][i]['red'] + "</td><td>" + deliv_status['deliv_list'][i]['green'] + "</td><td>" + deliv_status['deliv_list'][i]['blue'] + '</td></tr>')
                 }
 
-                socket.emit("request_curr")
+                
             })
 
 
@@ -129,9 +155,15 @@
                     // console.log(robot_info);
                     if (robot_info['status'] == "arrived" && robot_info['latest_addr'] != 0){
                         $('#arrive_alarm').addClass("blink-text");
+                        $('body').css({"background-color":"white","animation":"None", "-webkit-animation":"None"});  
+                    }
+                    else if(robot_info['status'] == "obstacle"){
+                        console.log("detect obstacle");
+                        $('body').css({"animation":"blink 1s step-end infinite", "-webkit-animation":"blink 1s step-end infinite"});
                     }
                     else{
                         $("#arrive_alarm").removeClass("blink-text").css({"font-weight":"normal", "background-color":"white", "color":"white"});
+                        $('body').css({"background-color":"white","animation":"None", "-webkit-animation":"None"}); 
                     }
                 }
             })
@@ -294,4 +326,3 @@
 
     </body>
 </html>
-

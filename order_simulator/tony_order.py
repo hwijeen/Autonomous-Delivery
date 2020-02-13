@@ -16,12 +16,12 @@ def unpack_orders(all_orders):
         id_, name, r, g, b, pending, orderdate, filldate, addr = order
 
         ##### Same as tony's #####
-        intv = orderdate - start_time # time delta
-        start_time = orderdate
+        # intv = orderdate - start_time # time delta
+        # start_time = orderdate
         ##########################
 
         #### Order at every 3 second ####
-        # intv = timedelta(seconds=10)
+        intv = timedelta(seconds=4)
         #################################
 
         intervals.append(intv)

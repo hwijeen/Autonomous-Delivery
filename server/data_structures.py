@@ -147,7 +147,7 @@ class Robot:
     def __init__(self):
         self.status = None
         self.latest_addr = 0
-        self.next_addr = None
+        self.next_addr = 0 # FIXME: not None?
         self.orientation = Orientation.CLOCK
         self.inventory = Inventory(0, 0, 0)
 
@@ -170,6 +170,7 @@ class Robot:
 
     # TODO: consider self.latest_addr = self.next_addr
     def get_ready_for_next_deliv(self, next_addr):
+        # self.latest_addr = self.next_addr
         self.next_addr = next_addr
         self.status = RobotStatus.DELIVERING
         return self.to_dict()

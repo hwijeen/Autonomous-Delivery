@@ -114,6 +114,7 @@ def handle_delivery_status_from_worker(delivery_status):
         to_unload = deliv_list.get_curr_deliv().to_dict()
         robot_inv = robot.inventory.unfill(to_unload)
         emit('robot_inv', robot_inv, broadcast=True)
+        logger.info(f'Robot inventory: {robot_inv}')
 
         updated_now_delivering, next_deliv = deliv_list.set_curr_deliv_complete()
         emit('now_delivering', updated_now_delivering, broadcast=True)
