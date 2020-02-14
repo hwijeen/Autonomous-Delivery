@@ -1,6 +1,6 @@
 # Autonomous Delivery System
 
-This is a repository for Autonomous Delivery System project by Nozama-Hotmetal. This was a project organized by [IITP](https://ezone.iitp.kr/common/anno/02/form.tab?PMS_TSK_PBNC_ID=PBD201900000075)-[CMU](https://www.cmu.edu/). Related article about the program can be found [here]((http://www.donga.com/news/article/all/20190819/97023944/1)). The final documentation including Project Description, Architectural Drivers, Architectural Designs can be found in `documentation.pdf`.
+This is a repository for Autonomous Delivery System project by Nozama-Hotmetal. This was a project organized by [IITP](https://ezone.iitp.kr/common/anno/02/form.tab?PMS_TSK_PBNC_ID=PBD201900000075)-[CMU](https://www.cmu.edu/). Related article about the program can be found [here](http://www.donga.com/news/article/all/20190819/97023944/1). The final documentation including Project Description, Architectural Drivers, Architectural Designs can be found in `documentation.pdf`.
 
 
 
