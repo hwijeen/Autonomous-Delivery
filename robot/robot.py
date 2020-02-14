@@ -1,152 +1,276 @@
 import cv2
-import numpy as np
-import socket
-import pickle
-import threading
 import time
+import numpy as np
 from adafruit_servokit import ServoKit
 
 import vision
-import socket_manager
 
-ADDRESS = {0: {'addr_x': 40, 'addr_y': 120, 'prev_count': 40, 'next_address': 101},
-           101: {'addr_x': 280, 'addr_y': 65, 'prev_count': 50, 'next_address': 102},
-           102: {'addr_x': 40, 'addr_y': 80, 'prev_count': 55, 'next_address': 103},
-           103: {'addr_x': 120, 'addr_y': 40, 'prev_count': 70, 'next_address': 203},
-           203: {'addr_x': 280, 'addr_y': 80, 'prev_count': 65, 'next_address': 202},
-           202: {'addr_x': 80, 'addr_y': 80, 'prev_count': 70, 'next_address': 201}}
+
+ADDRESS = {0: {'prev_count': 50, 'next_address': 101},
+           101: {'prev_count': 110, 'next_address': 102},
+           102: {'prev_count': 85, 'next_address': 103},
+           103: {'prev_count': 125, 'next_address': 203},
+           203: {'prev_count': 110, 'next_address': 202},
+           202: {'prev_count': 95, 'next_address': 201},
+           201: {'prev_count': 40, 'next_address': 0}}
+
+
+REV_ADDRESS = {0: {'prev_count': 65, 'next_address': 201},
+               201: {'prev_count': 90, 'next_address': 202},
+               202: {'prev_count': 90, 'next_address': 203},
+               203: {'prev_count': 115, 'next_address': 103},
+               103: {'prev_count': 80, 'next_address': 102},
+               102: {'prev_count': 87, 'next_address': 101},
+               101: {'prev_count': 40, 'next_address': 0}}
 
 
 class Robot:
-    def __init__(self, addrconn, imgconn):
-        self.status = {'addr': 0, 'status': 'arrived'}
-        self.next_address = None
+    def __init__(self, sio):
+        self.status = {'latest_addr': 0, 'status': 'arrived', 'orientation': 'clock', 'next_addr': None}
+        self.prev_info = {'left': 0.0, 'right': 0.0, 'count': 0, 'prev_count': 0}
+        self.rotation_flag = False
+        self.obstacle_count = 0
 
         self.cap = cv2.VideoCapture(0)
         self.kit = ServoKit(channels=16)
 
-        self.addrconn = addrconn
-        self.imgconn = imgconn
+        self.frame = None
 
-    def control(self):
-        count, prev_count = 0, 0
-        prev_left, prev_right = 0.0, 0.0
-        # Here we loop forever to send messages out to the server via the middleware.
+        self.sio = sio
+
+    def capture(self):
         while self.cap.isOpened():
-            # Capture frame-by-frame
-            ret, frame = self.cap.read()
-            frame = cv2.resize(frame, (320, 240))
+            _, self.frame = self.cap.read()
 
-            if self.status['status'] is 'delivering':
-                blur = cv2.GaussianBlur(frame, (5, 5), 0)
-                hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
+    def operate(self):
+        # Here we loop forever to send messages out to the server via the middleware.
+        while True:
+            start = time.time()
+            if self.frame is not None:
+                frame = cv2.resize(self.frame, (320, 240))
+                image = vision.preprocess(frame)
 
-                # track line
-                lines = vision.find_line(hsv[160:, :])
-                angle, shift = vision.calculate_angle(lines)
-                left, right = vision.track_line(angle, shift)
+                if self.rotation_flag is True:
+                    time.sleep(0.1)
+                    self.rotate()
+                elif self.status['status'] == 'delivering':
+                    # track line
+                    lines = vision.find_line(image)
+                    angle, shift = vision.calculate_angle(lines)
+                    left, right = vision.track_line(angle, shift)
 
-                stop_x, stop_y = vision.detect_stop(hsv)
-                addr_x, addr_y = vision.detect_address(hsv)
-                obstacle_flag = vision.detect_obstacle(lines)
+                    stop_x, stop_y = vision.detect_stop(image)
+                    obstacle_flag = vision.detect_obstacle(lines)
+                    if obstacle_flag is True:
+                        self.obstacle_count += 1
+                    else:
+                        self.obstacle_count = 0
 
-                if left is None or right is None:
-                    self.kit.continuous_servo[0].throttle = prev_right
-                    self.kit.continuous_servo[1].throttle = prev_left
+                    self.control(left, right, stop_y)
+
+                    self.prev_info['count'] += 1
+                    self.prev_info['prev_count'] += 1
                 else:
-                    self.kit.continuous_servo[0].throttle = right
-                    self.kit.continuous_servo[1].throttle = left
-                    prev_right = right
-                    prev_left = left
+                    self.kit.continuous_servo[0].throttle = 0.0
+                    self.kit.continuous_servo[1].throttle = 0.0
 
-                if obstacle_flag is True:
-                    self.status['status'] = 'obstacle'
-                    self.send_message('info', self.status)
+                if time.time() - start > 0.03:
+                    print("Elapsed time for one frame: %.4f" % (time.time() - start))
+                time.sleep(max(0, 0.03 - (time.time() - start)))
 
-                elif stop_y > 210:
-                    self.status['status'] = 'arrived'
-                    time.sleep(0.5)
-                    self.kit.continuous_servo[0].throttle = 0
-                    self.kit.continuous_servo[1].throttle = 0
-                    # set prev address
-                    self.status['addr'] = 0
-                    # reset count
-                    count, prev_count = 0, 0
-                    # send message to operatorUI
-                    self.send_message('info', self.status)
-                    print("Arrived at stop sign")
+    def control(self, left, right, stop_y):
+        # stop if obstacle is present
+        if self.obstacle_count > 2:
+            self.kit.continuous_servo[0].throttle = 0
+            self.kit.continuous_servo[1].throttle = 0
+            self.status['status'] = 'obstacle'
+            self.send_message('info', self.status)
+            print("Obstacle is in the road. No line detected")
+        # stop if detect stop sign
+        elif stop_y > 190:
+            time.sleep(0.7)
+            self.kit.continuous_servo[0].throttle = 0
+            self.kit.continuous_servo[1].throttle = 0
+            print("Arrived at stop sign")
+            print("frame count %d, prev count %d " % (self.prev_info['count'], self.prev_info['prev_count']))
+            print("stop_y %.4f" % stop_y)
+            self.correction()
+            self.status['status'] = 'arrived'
+            # set prev address
+            self.status['latest_addr'] = 0
+            # reset count
+            self.prev_info['count'], self.prev_info['prev_count'] = 0, 0
+            self.status['next_addr'] = None
+            # send message to operatorUI
+            self.send_message('info', self.status)
+        # otherwise while moving detect address
+        else:
+            if left is None or right is None:
+                self.kit.continuous_servo[0].throttle = self.prev_info['right']
+                self.kit.continuous_servo[1].throttle = self.prev_info['left']
+            else:
+                self.kit.continuous_servo[0].throttle = right
+                self.kit.continuous_servo[1].throttle = left
+                self.prev_info['right'] = right
+                self.prev_info['left'] = left
 
+            prev_address = self.status['latest_addr']
+            if self.status['orientation'] == 'clock':
+                if prev_address == 201:
+                    if self.prev_info['prev_count'] > ADDRESS[prev_address]['prev_count']:
+                        time.sleep(0.7)
+                        self.kit.continuous_servo[0].throttle = 0
+                        self.kit.continuous_servo[1].throttle = 0
+                        print("Arrived at stop sign by frame")
+                        self.correction()
+                        self.status['status'] = 'arrived'
+                        # set prev address
+                        self.status['latest_addr'] = 0
+                        # reset count
+                        self.prev_info['count'], self.prev_info['prev_count'] = 0, 0
+                        self.status['next_addr'] = None
+                        # send message to operatorUI
+                        self.send_message('info', self.status)
                 else:
-                    # check stop value
-                    '''
-                    if addr_x > 0.0:
-                        print("x position: %.4f, y position: %.4f" % (addr_x, addr_y))
-                        stop_flag = True
-                        kit.continuous_servo[0].throttle = 0
-                        kit.continuous_servo[1].throttle = 0
-                        msg = pickle.dumps(int(prev_address))
-                        destconn.send(msg)
-                    '''
-                    prev_address = self.status['addr']
-                    if prev_address in [101, 203]:
-                        if addr_x > ADDRESS[prev_address]['addr_x'] and addr_y > ADDRESS[prev_address]['addr_y'] or prev_count > ADDRESS[prev_address]['prev_count']:
-                            if prev_count > 10:
-                                self.status['addr'] = ADDRESS[prev_address]['next_address']
-
-                                print("Arrived at %d" % self.status['addr'])
-                                print("Addr-x: %d, addr-y: %d" % (addr_x, addr_y))
-                                print("frame count %d, prev count %d " % (count, prev_count))
-
-                                prev_count = 0
-
-                                if self.next_address == self.status['addr']:
-                                    self.status['status'] = 'arrived'
-                                    time.sleep(0.5)
-                                    self.kit.continuous_servo[0].throttle = 0
-                                    self.kit.continuous_servo[1].throttle = 0
-
-                                self.send_message('info', self.status)
-
-                    elif prev_address in [0, 102, 103, 202]:
-                        if addr_x < ADDRESS[prev_address]['addr_x'] and addr_y > ADDRESS[prev_address]['addr_y'] or prev_count > ADDRESS[prev_address]['prev_count']:
-                            if prev_count > 10:
-                                self.status['addr'] = ADDRESS[prev_address]['next_address']
-
-                                print("Arrived at %d" % self.status['addr'])
-                                print("Addr-x: %d, addr-y: %d" % (addr_x, addr_y))
-                                print("frame count %d, prev count %d " % (count, prev_count))
-
-                                prev_count = 0
-
-                                if self.next_address == self.status['addr']:
-                                    self.status['status'] = 'arrived'
-                                    time.sleep(0.5)
-                                    self.kit.continuous_servo[0].throttle = 0
-                                    self.kit.continuous_servo[1].throttle = 0
-
-                                self.send_message('info', self.status)
-
-                count += 1
-                prev_count += 1
+                    if self.prev_info['prev_count'] > ADDRESS[prev_address]['prev_count']:
+                        self.status['latest_addr'] = ADDRESS[prev_address]['next_address']
+                        print("Arrived at %d" % self.status['latest_addr'])
+                        print("frame count %d, prev count %d " % (self.prev_info['count'], self.prev_info['prev_count']))
+                        self.prev_info['prev_count'] = 0
+                        self.send_message('info', self.status)
 
             else:
-                self.kit.continuous_servo[0].throttle = 0.0
-                self.kit.continuous_servo[1].throttle = 0.0
+                if prev_address == 101:
+                    if self.prev_info['prev_count'] > REV_ADDRESS[prev_address]['prev_count']:
+                        time.sleep(0.7)
+                        self.kit.continuous_servo[0].throttle = 0
+                        self.kit.continuous_servo[1].throttle = 0
+                        print("Arrived at stop sign by frame")
+                        self.correction()
+                        self.status['status'] = 'arrived'
+                        # set prev address
+                        self.status['latest_addr'] = 0
+                        # reset count
+                        self.prev_info['count'], self.prev_info['prev_count'] = 0, 0
+                        self.status['next_addr'] = None
+                        print(self.status)
+                        # send message to operatorUI
+                        self.send_message('info', self.status)
 
-            # 추출한 이미지를 String 형태로 변환(인코딩)시키는 과정
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
-            result, imgencode = cv2.imencode('.jpg', frame, encode_param)
-            data = np.array(imgencode)
-            stringData = data.tostring()
+                else:
+                    if self.prev_info['prev_count'] > REV_ADDRESS[prev_address]['prev_count']:
+                        self.status['latest_addr'] = REV_ADDRESS[prev_address]['next_address']
+                        print("Arrived at %d" % self.status['latest_addr'])
+                        print("frame count %d, prev count %d " % (self.prev_info['count'], self.prev_info['prev_count']))
+                        self.prev_info['prev_count'] = 0
+                        self.send_message('info', self.status)
 
-            self.send_message('image', stringData)
+            if self.status['next_addr'] == self.status['latest_addr']:
+                self.kit.continuous_servo[0].throttle = 0
+                self.kit.continuous_servo[1].throttle = 0
+                self.status['status'] = 'arrived'
+                self.send_message('info', self.status)
 
-            time.sleep(0.01)
+    def rotate(self):
+        if self.status['orientation'] == 'counterclock':
+            if self.status['latest_addr'] in [0, 102]:
+                self.kit.continuous_servo[0].throttle = -0.5
+                self.kit.continuous_servo[1].throttle = -0.5
+                time.sleep(1.2)
+                self.kit.continuous_servo[0].throttle = 0.3
+                self.kit.continuous_servo[1].throttle = -0.3
+                time.sleep(0.1)
+
+                # reverse servo value
+                temp = self.prev_info['left']
+                self.prev_info['left'] = -1 * self.prev_info['right']
+                self.prev_info['right'] = -1 * temp
+
+                self.kit.continuous_servo[0].throttle = 0
+                self.kit.continuous_servo[1].throttle = 0
+                time.sleep(0.3)
+                self.rotation_flag = False
+
+            elif self.status['latest_addr'] in [101, 103]:
+                self.kit.continuous_servo[0].throttle = -0.5
+                self.kit.continuous_servo[1].throttle = -0.5
+                time.sleep(1.4)
+
+                # reverse servo value
+                temp = self.prev_info['left']
+                self.prev_info['left'] = -1 * self.prev_info['right']
+                self.prev_info['right'] = -1 * temp
+
+                self.kit.continuous_servo[0].throttle = 0
+                self.kit.continuous_servo[1].throttle = 0
+                # time.sleep(0.1)
+                self.rotation_flag = False
+
+        else:
+            if self.status['latest_addr'] in [0, 203]:
+                self.kit.continuous_servo[0].throttle = 0.5
+                self.kit.continuous_servo[1].throttle = 0.5
+                time.sleep(1.2)
+                self.kit.continuous_servo[0].throttle = 0.3
+                self.kit.continuous_servo[1].throttle = -0.3
+                time.sleep(0.1)
+
+                # reverse servo value
+                temp = self.prev_info['left']
+                self.prev_info['left'] = -1 * self.prev_info['right']
+                self.prev_info['right'] = -1 * temp
+
+                self.kit.continuous_servo[0].throttle = 0
+                self.kit.continuous_servo[1].throttle = 0
+                time.sleep(0.3)
+                self.rotation_flag = False
+
+            elif self.status['latest_addr'] == 201:
+                self.kit.continuous_servo[0].throttle = 0.5
+                self.kit.continuous_servo[1].throttle = 0.5
+                time.sleep(1.4)
+
+                # reverse servo value
+                temp = self.prev_info['left']
+                self.prev_info['left'] = -1 * self.prev_info['right']
+                self.prev_info['right'] = -1 * temp
+
+                self.kit.continuous_servo[0].throttle = 0
+                self.kit.continuous_servo[1].throttle = 0
+                # time.sleep(0.1)
+                self.rotation_flag = False
+            elif self.status['latest_addr'] == 202:
+                self.kit.continuous_servo[0].throttle = -0.5
+                self.kit.continuous_servo[1].throttle = -0.5
+                time.sleep(1.3)
+
+                # reverse servo value
+                temp = self.prev_info['left']
+                self.prev_info['left'] = -1 * self.prev_info['right']
+                self.prev_info['right'] = -1 * temp
+
+                self.kit.continuous_servo[0].throttle = 0
+                self.kit.continuous_servo[1].throttle = 0
+                # time.sleep(0.1)
+                self.rotation_flag = False
+
+    def correction(self):
+        if self.status['orientation'] == 'clock':
+            self.kit.continuous_servo[0].throttle = 0.0
+            self.kit.continuous_servo[1].throttle = 0.5
+
+            time.sleep(0.2)
+
+            self.kit.continuous_servo[0].throttle = 0.0
+            self.kit.continuous_servo[1].throttle = 0.0
+        else:
+            self.kit.continuous_servo[0].throttle = -0.5
+            self.kit.continuous_servo[1].throttle = 0.0
+
+            time.sleep(0.2)
+
+            self.kit.continuous_servo[0].throttle = 0.0
+            self.kit.continuous_servo[1].throttle = 0.0
 
     def send_message(self, type, msg):
-        if type == 'info':
-            self.addrconn.send(pickle.dumps(msg))
-        elif type == 'image':
-            # String 형태로 변환한 이미지를 socket을 통해서 전송
-            self.imgconn.send(bytes(str(len(msg)).ljust(16), 'utf8'))
-            self.imgconn.send(msg)
+        self.sio.emit('robot_info', msg)

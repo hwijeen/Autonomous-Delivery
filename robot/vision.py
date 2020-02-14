@@ -3,9 +3,18 @@ import numpy as np
 import imutils
 
 
+def preprocess(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    return hsv
+
+
 def find_line(image):
-    low_yellow = np.array([20, 65, 65])
-    up_yellow = np.array([35, 255, 255])
+    image = image[160:, :]
+    # low_yellow = np.array([20, 50, 200])
+    # up_yellow = np.array([35, 200, 255])
+    low_yellow = np.array([20, 0, 180])
+    up_yellow = np.array([35, 200, 255])
     mask = cv2.inRange(image, low_yellow, up_yellow)
     edges = cv2.Canny(mask, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 25, maxLineGap=25)
@@ -46,10 +55,8 @@ def calculate_angle(lines):
 
         if angle > 45.0:
             angle = 45.0
-            shift = 0.0
         elif angle < -45.0:
             angle = -45.0
-            shift = 0.0
 
     else:
         angle, shift = None, None
@@ -68,75 +75,20 @@ def track_line(angle, shift):
 
 
 def detect_obstacle(lines):
-    angles = []
-    tops = []
-    bots = []
     flag = False
 
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            bot_angle = np.arctan((y2 - y1) / (x1 - x2)) * 180.0 / np.pi
-            # our angle is a deviation from the y axis
-            if bot_angle < 0:
-                bot_angle = -90.0 - bot_angle
-            else:
-                bot_angle = 90.0 - bot_angle
-            # cv2.line(image, (x1, y1 + 160), (x2, y2 + 160), (0, 255, 0), 3)
-
-            angles.append(np.abs(bot_angle))
-            tops.append(min(y1, y2))
-            bots.append(max(y1, y2))
-
-        if max(angles) > 65.0 and min(angles) < 35.0:
-            if np.abs(tops[np.argmax(angles)] - tops[np.argmin(angles)]) < 20 and np.abs(bots[np.argmax(angles)] - tops[np.argmin(angles)]) < 20:
-                flag = True
-                print("Obstacle is in the road")
-                print(angles)
-                print(tops)
-                print(bots)
+    if lines is None:
+        return True
 
     return flag
 
 
-def draw_obstacle(image, lines):
-    angles = []
-    tops = []
-    bots = []
-    flag = False
-
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            bot_angle = np.arctan((y2 - y1) / (x1 - x2)) * 180.0 / np.pi
-            # our angle is a deviation from the y axis
-            if bot_angle < 0:
-                bot_angle = -90.0 - bot_angle
-            else:
-                bot_angle = 90.0 - bot_angle
-            cv2.line(image, (x1, y1 + 160), (x2, y2 + 160), (0, 255, 0), 3)
-
-            angles.append(np.abs(bot_angle))
-            tops.append(min(y1, y2))
-            bots.append(max(y1, y2))
-
-        if max(angles) > 70.0 and min(angles) < 10.0:
-            if np.abs(tops[np.argmax(angles)] - tops[np.argmin(angles)]) < 10 \
-                    and np.abs(bots[np.argmax(angles)] - tops[np.argmin(angles)]) < 10:
-                if max(tops) - min(bots) > 0:
-                    flag = True
-
-    return image
-
-
 def detect_stop(image):
-    image = image[120:240, :]
+    image = image[120:, :]
 
     lower_red = np.array([0, 70, 150])
     upper_red = np.array([10, 200, 200])
     mask1 = cv2.inRange(image, lower_red, upper_red)
-
-    # np.array([160, 100, 150])
 
     lower_red = np.array([170, 70, 150])
     upper_red = np.array([180, 255, 255])
@@ -164,23 +116,18 @@ def detect_stop(image):
             M = cv2.moments(cnts[max])
             cX = int((M["m10"] / M["m00"]))
             cY = int((M["m01"] / M["m00"]))
-            '''
-            cv2.drawContours(image, [cnts[max]], -1, (0, 255, 0), 2)
-            cv2.putText(image, "stop", (cX - 20, cY - 50), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, (255, 255, 255), 2)
-            '''
     else:
         # not used
         cX, cY = -1, -1
 
-    return cX, cY + 160
+    return cX, cY + 120
 
 
 def detect_address(image):
     # lower_green = np.array([40, 0, 50])
     # upper_green = np.array([90, 255, 255])
-    lower_green = np.array([30, 10, 40])
-    upper_green = np.array([100, 100, 200])
+    lower_green = np.array([30, 0, 40])
+    upper_green = np.array([100, 100, 150])
 
     mask = cv2.inRange(image, lower_green, upper_green)
     output = cv2.bitwise_and(image, image, mask=mask)
@@ -203,11 +150,7 @@ def detect_address(image):
             M = cv2.moments(cnts[max])
             cX = int((M["m10"] / M["m00"]))
             cY = int((M["m01"] / M["m00"]))
-            '''
-            cv2.drawContours(image, [cnts[max]], -1, (0, 255, 0), 2)
-            cv2.putText(image, "stop", (cX - 20, cY - 50), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, (255, 255, 255), 2)
-            '''
+
     else:
         cX, cY = -1, -1
 
