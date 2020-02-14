@@ -21,7 +21,7 @@ Project consists of 5 main modules: `main_server`, `order_server`, `robot`, `sch
 ```bash
 ├── main_server       # Main server connecting robot, scheduler, and UI
 ├── order_server      # Web server for accepting orders
-├── robot							# Runs on Raspberri-pi
+├── robot			  # Runs on Raspberri-pi
 ├── scheduler
 ├── order_simulator
 ├── document.pdf
