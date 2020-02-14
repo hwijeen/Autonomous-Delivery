@@ -26,6 +26,7 @@ PORT = 60001
 def init_req(sid, msg):
     global now
     req_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    time.sleep(1)
     sio.emit('request_deliv_list', req_time) # almost same as in the last address
     print(f'Requested delivery list at {req_time}')
 
@@ -39,6 +40,7 @@ def stack_deliv_list(sid, deliv_dict_list):
     if len(deliv_dict_list) == 1:
         now += timedelta(seconds=10)
         req_time = now.strftime('%Y-%m-%d %H:%M:%S')
+        time.sleep(1)
         sio.emit('request_deliv_list', req_time) # almost same as in the last address
         print(f'Requested delivery list at {req_time}')
         return

@@ -46,36 +46,13 @@
         <script>
             var socket = io.connect();
 
-            // $('#unload_complete_button').one("click", robot_go);
-
             function robot_go(){
                 // alert("one works!");
                 console.log("complete_load");
                 socket.emit('delivery_status', "complete");
-                $('#unload_complete').css({})
-                // $('#unload_complete').css({btn btn-info text-center});
-                $("#unload_complete").removeClass("btn-info");
-                $('#unload_complete').addClass("btn-warning");
-                sleep(1000);
-                $("#unload_complete").removeClass("btn-warning");
-                $('#unload_complete').addClass("btn-info");
-
-                // $('#unload_complete').addClass("btn-warning");
-                // setTimeout(() => {  }, 1000);
-
-                
-                // $('#curr_deliv_add').text(" ");
                 }
             
 
-            // $(document).ready(function(){
-            //     $('#unload_complete_button').one('click', function(){
-            //         socket.emit('delivery_status', "complete");
-            //         // $('#curr_deliv_add').text(" ");
-            //         alert("one works!");
-            //         console.log("one works@")
-            //     })
-            // })
 
             function misdliv(){
                 socket.emit('delivery_status', "misdelivery");
@@ -87,8 +64,6 @@
 
             socket.on('connect', function(){
                 console.log("Connected");
-                // socket.emit("request");
-                socket.emit("request5");
             });
 
 
@@ -120,18 +95,8 @@
                     $('#sum_g').text(deliv_status['sum']['green']);
                     $('#sum_b').text(deliv_status['sum']['blue']);
 
-                    $(document).ready(function(){
-                        $('#load_complete').one('click', function(){
-                            socket.emit('load_complete');
-                            console.log("load_complete");
-                        })
-                    })
-
-
-
                 }
-                    // socket.emit("request5");
-                // socket.emit("request3");
+        
                 var table_len = deliv_status['deliv_list'].length;
                 var table = $('#delivery_list_unloader');
                 table.find("tbody tr").remove();
@@ -155,7 +120,10 @@
                     // console.log(robot_info);
                     if (robot_info['status'] == "arrived" && robot_info['latest_addr'] != 0){
                         $('#arrive_alarm').addClass("blink-text");
-                        $('body').css({"background-color":"white","animation":"None", "-webkit-animation":"None"});  
+                        $('body').css({"background-color":"white","animation":"None", "-webkit-animation":"None"});
+                        
+
+
                     }
                     else if(robot_info['status'] == "obstacle"){
                         console.log("detect obstacle");
@@ -193,14 +161,6 @@
                                 "background-color": "#FFC1D9"
                             });
 
-                            // $(document).ready(function(){
-                            //     $('#unload_complete_button').one('click', function(){
-                            //         socket.emit('delivery_status', "complete");
-                            //         console.log("unload_complete");
-                            //         console.log('-------------------')
-                            //     })
-                            // })
-                            // $('#unload_complete_button').one("click", robot_go);
                             break;
                         }
                         else{console.log("no match addr");}
@@ -284,11 +244,9 @@
                                             </tbody>
                                         </table>
                                         <div class="text-center">
-                                        <input type="submit" class="btn btn-info text-center" value="Complete Load", id="load_complete">
+                                        <input type="submit" class="btn btn-info text-center" value="Complete Load" onclick="load_complete();">
                                         <!-- <input type="submit" class="btn btn-success btn-lg btn-block" name="Go" value="Go" onclick="robot_go();"> -->
                                         </div>
-
-
                         </div>
 
                           <div class="column">
@@ -313,11 +271,7 @@
 
                                     <div class="text-center">
                                     <input type="submit" class="btn btn-info text-center" value="Unload Complete", onclick="robot_go();" id="unload_complete">
-                                    <!-- <input type="submit" class="btn btn-info text-center" value="Unload Complete" id="unload_complete_button"> -->
-                                    <!-- <input type="submit" class="btn btn-info text-center" value="Unload Complete" id="robot_go"> -->
                                     <input type="submit" class="btn btn-danger text-center" value="Misdelivery", onclick="misdliv();">
-                                   <!--  <input type="submit" class="btn btn-warning text-center" value="drop", onclick=None> -->
-                            
                         </div>
                     </div>
                 </main>

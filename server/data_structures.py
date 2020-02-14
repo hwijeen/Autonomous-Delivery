@@ -16,9 +16,9 @@ STATUS = 'status'
 NUM_ROUND = 'num_round'
 
 class NUM_ITEM:
-    RED = 26
-    GREEN = 26
-    BLUE = 26
+    RED = 25
+    GREEN = 25
+    BLUE = 25
 
 class RobotStatus:
     ARRIVIED = 'arrived'
